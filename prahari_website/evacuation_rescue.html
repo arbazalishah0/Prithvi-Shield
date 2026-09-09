@@ -575,12 +575,13 @@
 
       L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-      // Base tile options
+      // Base tile options (Google Maps)
+      baseTiles.gmap = L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { subdomains: ['mt0', 'mt1', 'mt2', 'mt3'], maxZoom: 20, attribution: '&copy; Google Maps' });
+      baseTiles.sat = L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { subdomains: ['mt0', 'mt1', 'mt2', 'mt3'], maxZoom: 20, attribution: '&copy; Google Maps Satellite' });
       baseTiles.dark = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', { maxZoom: 16 });
-      baseTiles.sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18 });
       baseTiles.topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17 });
 
-      currentTileLayer = baseTiles.dark;
+      currentTileLayer = baseTiles.gmap;
       currentTileLayer.addTo(map);
 
       // Attach layer groups

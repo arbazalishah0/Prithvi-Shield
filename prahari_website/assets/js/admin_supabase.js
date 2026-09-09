@@ -116,19 +116,27 @@ export async function fetchLiveHazardReports() {
 export function subscribeToHazardRealtime(onUpdateCallback) {
   try {
     const channel = adminSupabase
-      .channel('hazard-reports-realtime')
+      .channel('prithvi-shield-realtime-channel')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'reports' },
+        (payload) => {
+          console.log('⚡ [SUPABASE REALTIME] New incident report event:', payload);
+          if (typeof onUpdateCallback === 'function') onUpdateCallback(payload);
+        }
+      )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'hazard_reports' },
         (payload) => {
-          console.log('⚡ Realtime hazard report change detected:', payload);
+          console.log('⚡ [SUPABASE REALTIME] Hazard report change:', payload);
           if (typeof onUpdateCallback === 'function') onUpdateCallback(payload);
         }
       )
       .subscribe();
     return channel;
   } catch (err) {
-    console.warn('Realtime channel subscription fallback:', err);
+    console.warn('Supabase Realtime channel subscription note:', err);
     return null;
   }
 }

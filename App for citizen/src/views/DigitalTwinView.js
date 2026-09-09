@@ -131,8 +131,9 @@ export function bindDigitalTwinEvents(container) {
     }).setView([currentLocation.lat, currentLocation.lng], 14);
 
     // Google Maps Satellite / Hybrid tiles for Digital Twin GIS
-    L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+    L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
       maxZoom: 20,
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
       attribution: '&copy; Google Earth / Satellite GIS'
     }).addTo(gisMap);
 

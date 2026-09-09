@@ -13,17 +13,20 @@ import pickle
 # GEE + SATELLITE + XGBOOST + PHYSICS
 # ==========================================
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+def load_env_file(filepath):
+    if os.path.exists(filepath):
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        k, v = line.split("=", 1)
+                        os.environ[k.strip()] = v.strip()
+        except Exception as e:
+            print("Env load note:", e)
 
-try:
-    from dotenv import load_dotenv
-    env_file = os.path.join(BASE_DIR, ".env")
-    if os.path.exists(env_file):
-        load_dotenv(env_file)
-    else:
-        load_dotenv()
-except Exception:
-    pass
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+load_env_file(os.path.join(BASE_DIR, ".env"))
 
 sys.path.append(
     os.path.dirname(
@@ -325,7 +328,8 @@ def calculate_final_risk(
 
 @app.post("/analyze-location")
 def analyze_location(
-    location: LocationRequest
+    location: LocationRequest,
+    background_tasks: BackgroundTasks
 ):
 
     try:
@@ -874,6 +878,25 @@ def analyze_location(
 
         }
 
+        # ==================================
+        # AUTOMATIC SMS EARLY WARNING TRIGGER
+        # ==================================
+        final_risk_str = str(combined_risk.get("final_risk_level", "LOW")).upper()
+        if final_risk_str in ["HIGH", "CRITICAL"]:
+            try:
+                risk_score_val = round(float(risk_probability * 100), 2)
+                radius_km = float(os.getenv("SMS_DANGER_RADIUS_KM", "5.0"))
+                background_tasks.add_task(
+                    trigger_sms_early_warning,
+                    latitude=latitude,
+                    longitude=longitude,
+                    risk_level=final_risk_str,
+                    risk_score=risk_score_val,
+                    danger_radius_km=radius_km
+                )
+                print(f"📡 [Prithvi Shield SMS] Background early warning task scheduled for risk '{final_risk_str}' at [{latitude}, {longitude}]")
+            except Exception as sms_err:
+                print(f"⚠️ [Prithvi Shield SMS] Background task schedule warning: {sms_err}")
 
         return result
 
@@ -1422,13 +1445,110 @@ async def submit_citizen_hazard_report(
 @app.get("/api/hazards/reports")
 async def get_all_hazard_reports(limit: int = 50, status: Optional[str] = None):
     """
-    Fetch all citizen hazard reports with complete deepfake verification details.
+    Fetch all citizen hazard reports with complete deepfake verification details,
+    Priority Score, Evidence Integrity Score, and Priority Sorting.
     Powers Real-Time Admin Command Dashboard feed.
     """
-    reports = list_hazard_reports(limit=limit, status=status)
+    raw_reports = list_hazard_reports(limit=limit, status=status)
+    processed_reports = []
+    
+    for r in raw_reports:
+        # Calculate Evidence Integrity Score (0-100)
+        auth_score = r.get("authenticity_score", 94.0)
+        deepfake_status = r.get("deepfake_status", "AUTHENTIC")
+        manipulation_prob = r.get("manipulation_probability", 5.0)
+        location_accuracy = r.get("location_accuracy", 10.0)
+
+        meta_check = 100 if deepfake_status == "AUTHENTIC" else 60
+        gps_check = 100 if location_accuracy <= 15 else 80
+        integrity_score = min(100, max(0, int(auth_score * 0.45 + (100 - manipulation_prob) * 0.35 + meta_check * 0.1 + gps_check * 0.1)))
+        
+        if integrity_score >= 90:
+            integrity_class = "HIGHLY TRUSTED"
+        elif integrity_score >= 70:
+            integrity_class = "TRUSTED"
+        elif integrity_score >= 40:
+            integrity_class = "REQUIRES REVIEW"
+        else:
+            integrity_class = "SUSPICIOUS"
+
+        # Calculate Priority Score (0-100)
+        category = (r.get("category") or r.get("hazard_type") or "LANDSLIDE").upper()
+        base_priority = 45 if "LANDSLIDE" in category else 40 if any(k in category for k in ["BLOCK", "FLOOD"]) else 30
+        priority_score = min(100, max(0, int(base_priority + (integrity_score * 0.3) + 15)))
+
+        if priority_score >= 85:
+            severity_level = "CRITICAL"
+        elif priority_score >= 65:
+            severity_level = "HIGH"
+        elif priority_score >= 40:
+            severity_level = "MODERATE"
+        else:
+            severity_level = "LOW"
+
+        r["priority_score"] = priority_score
+        r["severity_level"] = severity_level
+        r["evidence_integrity_score"] = integrity_score
+        r["integrity_classification"] = integrity_class
+        r["ai_analysis_status"] = "COMPLETED" if r.get("status") in ["VERIFIED", "APPROVED", "SUSPICIOUS", "ACTIVE_INCIDENT"] else "PROCESSING"
+        processed_reports.append(r)
+
+    # Sort descending by priority score (Feature 3)
+    processed_reports.sort(key=lambda x: x.get("priority_score", 0), reverse=True)
+
     return {
-        "reports": reports,
-        "total": len(reports)
+        "reports": processed_reports,
+        "total": len(processed_reports)
+    }
+
+
+@app.get("/api/hazards/clusters")
+async def get_hazard_clusters():
+    """
+    Incident Clustering Engine (Feature 8):
+    Groups citizen reports within 500 meters into Incident Clusters.
+    """
+    raw_reports = list_hazard_reports(limit=100)
+    clusters = []
+    visited = set()
+
+    for i, r in enumerate(raw_reports):
+        code = r.get("report_code") or r.get("report_id") or str(i)
+        if code in visited:
+            continue
+
+        cluster_members = [r]
+        visited.add(code)
+        lat1, lng1 = r.get("latitude", 27.33), r.get("longitude", 88.60)
+
+        for j, other in enumerate(raw_reports):
+            other_code = other.get("report_code") or other.get("report_id") or str(j)
+            if other_code in visited:
+                continue
+            lat2, lng2 = other.get("latitude", 27.33), other.get("longitude", 88.60)
+            if abs(lat1 - lat2) <= 0.005 and abs(lng1 - lng2) <= 0.005:
+                cluster_members.append(other)
+                visited.add(other_code)
+
+        cluster_id = f"INCIDENT CLUSTER #LS-2026-{len(clusters) + 1:03d}"
+        clusters.append({
+            "cluster_id": cluster_id,
+            "primary_incident": r.get("category") or r.get("hazard_type") or "Landslide",
+            "latitude": lat1,
+            "longitude": lng1,
+            "report_count": len(cluster_members),
+            "evidence_count": len([m for m in cluster_members if m.get("image_url")]),
+            "status": r.get("status", "ACTIVE_INCIDENT"),
+            "severity_level": r.get("severity_level", "CRITICAL"),
+            "priority_score": r.get("priority_score", 92),
+            "time_window": "Active 24h Sector",
+            "reports": cluster_members
+        })
+
+    return {
+        "success": True,
+        "clusters": clusters,
+        "total_clusters": len(clusters)
     }
 
 
@@ -1918,3 +2038,473 @@ async def get_command_metrics():
             "active_rescue_teams": team_count
         }
     }
+
+
+# ============================================================
+# SMS LANDSLIDE EARLY WARNING SYSTEM & FAST2SMS INTEGRATION
+# ============================================================
+
+import urllib.request
+import urllib.parse
+import math
+from datetime import datetime, timezone, timedelta
+
+SMS_ALERTS_LOG = [
+    {
+        "id": "SMS-SEED-001",
+        "user_id": "citizen_005",
+        "phone": "9733022334",
+        "latitude": 27.3389,
+        "longitude": 88.6065,
+        "risk_level": "CRITICAL",
+        "risk_score": 92.4,
+        "message": "PRITHVI-SHIELD CRITICAL ALERT: Immediate landslide danger detected near your area.",
+        "provider": "Fast2SMS",
+        "status": "SENT",
+        "error_message": None,
+        "is_test": False,
+        "danger_radius_km": 5.0,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+]
+
+
+def calculate_haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    R = 6371.0
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
+
+
+def normalize_indian_phone(raw_phone: str) -> Optional[str]:
+    if not raw_phone:
+        return None
+    digits = ''.join(c for c in str(raw_phone) if c.isdigit())
+    if len(digits) == 12 and digits.startswith("91"):
+        digits = digits[2:]
+    elif len(digits) == 11 and digits.startswith("0"):
+        digits = digits[1:]
+    if len(digits) == 10 and digits[0] in '6789':
+        return digits
+    return None
+
+
+def trigger_sms_early_warning(
+    latitude: float,
+    longitude: float,
+    risk_level: str,
+    risk_score: float,
+    danger_radius_km: float = 5.0,
+    is_test: bool = False,
+    test_phone: str = None,
+    custom_message: str = None
+):
+    """
+    Production-Safe Server-Side SMS Early Warning Dispatcher.
+    Integrates with Fast2SMS API and handles deduplication, Haversine proximity, and simulation fallbacks.
+    Guaranteed non-blocking (never throws unhandled errors).
+    """
+    try:
+        try:
+            from dotenv import load_dotenv
+            load_dotenv(os.path.join(BASE_DIR, ".env"), override=True)
+        except Exception:
+            pass
+        fast2sms_key = os.getenv("FAST2SMS_API_KEY", "").strip()
+        cooldown_minutes = int(os.getenv("SMS_ALERT_COOLDOWN_MINUTES", "30"))
+        upper_risk = risk_level.upper()
+
+        print("\n========================================")
+        print("🚨 [PRITHVI SHIELD SMS EARLY WARNING]")
+        print("========================================")
+        print(f"Risk Level: {upper_risk}")
+        print(f"Prediction Coordinates: [{latitude}, {longitude}]")
+        print(f"Danger Radius: {danger_radius_km} km")
+        print(f"Test Mode: {is_test}")
+
+        # TEST MODE DISPATCH
+        if is_test:
+            phone = normalize_indian_phone(test_phone)
+            if not phone:
+                print(f"❌ [Prithvi Shield SMS] Invalid test phone number: {test_phone}")
+                return {"success": False, "error": f"Invalid Indian mobile number: {test_phone}"}
+
+            msg_text = custom_message or "PRITHVI-SHIELD TEST ALERT\nThis is a test of the landslide early-warning system.\nNo action is required."
+            sms_status = "SIMULATED"
+            err_detail = None
+
+            if fast2sms_key and fast2sms_key != "YOUR_FAST2SMS_API_KEY":
+                try:
+                    clean_msg = msg_text.replace('\n', ' ')
+                    query_params = urllib.parse.urlencode({
+                        "authorization": fast2sms_key,
+                        "route": "q",
+                        "message": clean_msg,
+                        "language": "english",
+                        "flash": "0",
+                        "numbers": phone
+                    })
+                    fast2sms_url = f"https://www.fast2sms.com/dev/bulkV2?{query_params}"
+                    req = urllib.request.Request(fast2sms_url, headers={"User-Agent": "PrithviShield/2.1"})
+                    with urllib.request.urlopen(req, timeout=10) as response:
+                        res_body = json.loads(response.read().decode('utf-8'))
+                        if res_body.get("return") is True:
+                            sms_status = "SENT"
+                            print(f"✅ [Prithvi Shield SMS] Test SMS successfully delivered to +91{phone}")
+                        else:
+                            sms_status = "FAILED"
+                            err_detail = str(res_body.get("message") or "Fast2SMS provider error")
+                            print(f"⚠️ [Prithvi Shield SMS] Fast2SMS Test Warning: {err_detail}")
+                except urllib.error.HTTPError as ex:
+                    sms_status = "FAILED"
+                    try:
+                        err_body = ex.read().decode('utf-8') if ex.fp else str(ex)
+                        err_json = json.loads(err_body)
+                        err_detail = str(err_json.get("message") or err_json.get("detail") or err_body)
+                    except Exception:
+                        err_detail = str(ex)
+                    print(f"❌ [Prithvi Shield SMS] Fast2SMS HTTP {ex.code} Exception: {err_detail}")
+                except Exception as ex:
+                    sms_status = "FAILED"
+                    err_detail = str(ex)
+                    print(f"❌ [Prithvi Shield SMS] Fast2SMS Exception: {ex}")
+            else:
+                err_detail = "FAST2SMS_API_KEY not configured. Simulated test SMS."
+                print(f"ℹ️ [Prithvi Shield SMS] TEST MODE (SIMULATED): Sent to +91{phone}")
+
+            record = {
+                "id": f"SMS-TEST-{int(datetime.now().timestamp())}",
+                "user_id": "TEST_USER",
+                "phone": phone,
+                "latitude": latitude,
+                "longitude": longitude,
+                "risk_level": upper_risk,
+                "risk_score": risk_score,
+                "message": msg_text,
+                "provider": "Fast2SMS",
+                "status": sms_status,
+                "error_message": err_detail,
+                "is_test": True,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            SMS_ALERTS_LOG.insert(0, record)
+            return {"success": sms_status in ["SENT", "SIMULATED"], "status": sms_status, "record": record}
+
+        # AUTOMATIC ALERT THRESHOLD CHECK
+        if upper_risk not in ["HIGH", "CRITICAL"]:
+            print(f"ℹ️ [Prithvi Shield SMS] Risk level '{upper_risk}' does not meet threshold (HIGH/CRITICAL). No SMS required.")
+            return {"success": True, "status": "SKIPPED_LOW_RISK"}
+
+        # CITIZEN LOCATION PROXIMITY CHECK (Haversine <= danger_radius_km)
+        default_citizens = [
+            {"user_id": "citizen_005", "name": "Tashi Lepcha", "phone": "+919733022334", "lat": 27.3389, "lng": 88.6065},
+            {"user_id": "citizen_004", "name": "Ananya Nair", "phone": "+919447099001", "lat": 11.5542, "lng": 76.1264},
+            {"user_id": "citizen_003", "name": "Rajesh Sharma", "phone": "+919837077889", "lat": 30.5564, "lng": 79.5662},
+            {"user_id": "citizen_007", "name": "Rahul Sharma", "phone": "+919876543210", "lat": 27.3380, "lng": 88.6050}
+        ]
+
+        affected = []
+        for c in default_citizens:
+            dist = calculate_haversine_km(latitude, longitude, c["lat"], c["lng"])
+            if dist <= danger_radius_km:
+                valid_p = normalize_indian_phone(c["phone"])
+                if valid_p:
+                    affected.append({"user_id": c["user_id"], "name": c["name"], "phone": valid_p, "dist": round(dist, 1)})
+
+        print(f"[Prithvi Shield SMS] Citizens inside danger radius ({danger_radius_km} km): {len(affected)}")
+
+        if not affected:
+            print("ℹ️ [Prithvi Shield SMS] No registered citizens located within danger radius.")
+            return {"success": True, "status": "NO_CITIZENS_IN_RADIUS", "citizens_inside": 0}
+
+        # DEDUPLICATION & COOLDOWN CHECK (30 MINS)
+        now_dt = datetime.now(timezone.utc)
+        cutoff = now_dt - timedelta(minutes=cooldown_minutes)
+
+        to_send = []
+        cooldown_skipped = 0
+
+        for citizen in affected:
+            recent = [a for a in SMS_ALERTS_LOG if a.get("phone") == citizen["phone"] and not a.get("is_test")]
+            is_cooldown = False
+            if recent:
+                last = recent[0]
+                try:
+                    last_time = datetime.fromisoformat(last.get("created_at").replace('Z', '+00:00'))
+                    if last_time > cutoff:
+                        # Escalation check: HIGH -> CRITICAL bypasses cooldown!
+                        if not (last.get("risk_level") == "HIGH" and upper_risk == "CRITICAL"):
+                            is_cooldown = True
+                except Exception:
+                    pass
+
+            if is_cooldown:
+                cooldown_skipped += 1
+                print(f"⏸️ [Prithvi Shield SMS] Cooldown active for +91{citizen['phone']}. Skipping repeat alert.")
+            else:
+                to_send.append(citizen)
+
+        print(f"[Prithvi Shield SMS] SMS attempted: {len(to_send)} | Cooldown skipped: {cooldown_skipped}")
+
+        if not to_send:
+            return {"success": True, "status": "ALL_SUPPRESSED_BY_COOLDOWN", "cooldown_skipped": cooldown_skipped}
+
+        # CONSTRUCT EMERGENCY SMS BODY
+        if upper_risk == "CRITICAL":
+            msg_body = f"PRITHVI-SHIELD CRITICAL ALERT:\nImmediate landslide danger detected near your area.\nPlease evacuate toward a safe location and follow instructions from local authorities.\nLocation:\nhttps://www.google.com/maps?q={latitude},{longitude}"
+        else:
+            msg_body = f"PRITHVI-SHIELD ALERT:\nHIGH landslide risk detected near your area.\nRisk Score: {risk_score:.1f}%\nPlease move to a safer location and follow instructions from local authorities.\nLocation:\nhttps://www.google.com/maps?q={latitude},{longitude}"
+
+        phones = [c["phone"] for c in to_send]
+        sms_status = "SIMULATED"
+        err_detail = None
+
+        if fast2sms_key and fast2sms_key != "YOUR_FAST2SMS_API_KEY":
+            try:
+                clean_msg_body = msg_body.replace('\n', ' ')
+                query_params = urllib.parse.urlencode({
+                    "authorization": fast2sms_key,
+                    "route": "q",
+                    "message": clean_msg_body,
+                    "language": "english",
+                    "flash": "0",
+                    "numbers": ",".join(phones)
+                })
+                fast2sms_url = f"https://www.fast2sms.com/dev/bulkV2?{query_params}"
+                req = urllib.request.Request(fast2sms_url, headers={"User-Agent": "PrithviShield/2.1"})
+                with urllib.request.urlopen(req, timeout=10) as response:
+                    res_body = json.loads(response.read().decode('utf-8'))
+                    if res_body.get("return") is True:
+                        sms_status = "SENT"
+                        print(f"✅ [Prithvi Shield SMS] Fast2SMS broadcast accepted for {len(phones)} numbers.")
+                    else:
+                        sms_status = "FAILED"
+                        err_detail = str(res_body.get("message") or "Fast2SMS API error")
+                        print(f"⚠️ [Prithvi Shield SMS] Fast2SMS dispatch failure: {err_detail}")
+            except urllib.error.HTTPError as ex:
+                sms_status = "FAILED"
+                try:
+                    err_body = ex.read().decode('utf-8') if ex.fp else str(ex)
+                    err_json = json.loads(err_body)
+                    err_detail = str(err_json.get("message") or err_json.get("detail") or err_body)
+                except Exception:
+                    err_detail = str(ex)
+                print(f"❌ [Prithvi Shield SMS] Fast2SMS HTTP {ex.code} Exception: {err_detail}")
+            except Exception as ex:
+                sms_status = "FAILED"
+                err_detail = str(ex)
+                print(f"❌ [Prithvi Shield SMS] Fast2SMS exception: {ex}")
+        else:
+            err_detail = "FAST2SMS_API_KEY not configured. Simulated emergency broadcast."
+            print(f"ℹ️ [Prithvi Shield SMS] SIMULATED DISPATCH to {len(phones)} numbers: {', '.join(phones)}")
+
+        for citizen in to_send:
+            rec = {
+                "id": f"SMS-{int(datetime.now().timestamp())}-{citizen['user_id']}",
+                "user_id": citizen["user_id"],
+                "phone": citizen["phone"],
+                "latitude": latitude,
+                "longitude": longitude,
+                "risk_level": upper_risk,
+                "risk_score": risk_score,
+                "message": msg_body,
+                "provider": "Fast2SMS",
+                "status": sms_status,
+                "error_message": err_detail,
+                "is_test": False,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            SMS_ALERTS_LOG.insert(0, rec)
+
+        print(f"✅ [Prithvi Shield SMS] Successful: {len(to_send) if sms_status in ['SENT', 'SIMULATED'] else 0} | Failed: {len(to_send) if sms_status == 'FAILED' else 0}")
+
+        return {
+            "success": True,
+            "risk_level": upper_risk,
+            "prediction_coords": {"latitude": latitude, "longitude": longitude},
+            "citizens_inside_radius": len(affected),
+            "sms_attempted": len(to_send),
+            "sms_successful": len(to_send) if sms_status in ["SENT", "SIMULATED"] else 0,
+            "sms_failed": len(to_send) if sms_status == "FAILED" else 0,
+            "cooldown_skipped": cooldown_skipped,
+            "simulation_mode": not fast2sms_key or fast2sms_key == "YOUR_FAST2SMS_API_KEY"
+        }
+    except Exception as general_err:
+        print(f"❌ [Prithvi Shield SMS] General Exception: {general_err}")
+        return {"success": False, "error": str(general_err)}
+
+
+class TestSmsRequest(BaseModel):
+    phone: str
+    risk_level: Optional[str] = "HIGH"
+    risk_score: Optional[float] = 85.0
+    latitude: Optional[float] = 27.3389
+    longitude: Optional[float] = 88.6065
+    message: Optional[str] = None
+
+
+@app.post("/api/sms/test-alert")
+async def send_test_sms_alert(req: TestSmsRequest):
+    """
+    Test Mode Endpoint for SIH Demonstration:
+    Sends a test SMS to a specified Indian mobile number without broadcasting to all citizens.
+    """
+    res = trigger_sms_early_warning(
+        latitude=req.latitude,
+        longitude=req.longitude,
+        risk_level=req.risk_level,
+        risk_score=req.risk_score,
+        is_test=True,
+        test_phone=req.phone,
+        custom_message=req.message
+    )
+    return res
+
+
+@app.get("/api/sms/alerts")
+async def get_sms_alerts_history(limit: int = 50):
+    """
+    Retrieve SMS alert logs and dashboard delivery statistics.
+    """
+    logs = SMS_ALERTS_LOG[:limit]
+    total_count = len(SMS_ALERTS_LOG)
+    successful_count = len([l for l in SMS_ALERTS_LOG if l.get("status") in ["SENT", "SIMULATED"]])
+    failed_count = len([l for l in SMS_ALERTS_LOG if l.get("status") == "FAILED"])
+    affected_citizens = len(set(l.get("phone") for l in SMS_ALERTS_LOG if l.get("phone")))
+
+    return {
+        "success": True,
+        "stats": {
+            "total_alerts": total_count,
+            "successful_alerts": successful_count,
+            "failed_alerts": failed_count,
+            "affected_citizens": affected_citizens
+        },
+        "alerts": logs
+    }
+
+
+class DirectCitizenSmsRequest(BaseModel):
+    phone: str
+    citizen_name: Optional[str] = "Citizen"
+    message: Optional[str] = None
+    report_code: Optional[str] = None
+    hazard_type: Optional[str] = "LANDSLIDE"
+
+
+@app.get("/api/citizens/extracted-data")
+async def get_extracted_citizen_data():
+    """
+    Extract structured citizen data (phone numbers, location coordinates, hazard type, report IDs, timestamps)
+    directly from active hazard reports and registered citizen user profiles.
+    Powers direct SMS dispatch and offline disaster contact exports.
+    """
+    extracted_dict = {}
+
+    # 1. Extract from Hazard Reports
+    try:
+        reports = list_hazard_reports(limit=100)
+        for r in reports:
+            phone_raw = r.get("user_phone") or r.get("citizen_phone") or r.get("phone")
+            norm_phone = normalize_indian_phone(phone_raw)
+            if not norm_phone:
+                continue
+
+            code = r.get("report_code") or r.get("report_id") or "REP-CITIZEN"
+            name = r.get("citizen_name") or r.get("user_name") or "Verified Citizen"
+            lat = float(r.get("lat") or r.get("latitude") or 27.3389)
+            lng = float(r.get("lng") or r.get("longitude") or 88.6065)
+            hazard = (r.get("hazard_type") or r.get("category") or "LANDSLIDE").upper()
+            status = r.get("status") or "VERIFIED"
+            time_str = r.get("created_at") or r.get("time") or datetime.now(timezone.utc).isoformat()
+
+            key = norm_phone
+            if key not in extracted_dict or r.get("priority_score", 0) > extracted_dict[key].get("priority_score", 0):
+                extracted_dict[key] = {
+                    "user_id": r.get("user_id") or f"cit_{norm_phone[-4:]}",
+                    "citizen_name": name,
+                    "phone": norm_phone,
+                    "phone_formatted": f"+91{norm_phone}",
+                    "latitude": lat,
+                    "longitude": lng,
+                    "hazard_type": hazard,
+                    "report_code": code,
+                    "status": status,
+                    "last_active": time_str,
+                    "source": "CITIZEN_REPORT",
+                    "priority_score": r.get("priority_score", 50)
+                }
+    except Exception as ex:
+        print(f"⚠️ Warning extracting citizen report data: {ex}")
+
+    # 2. Extract from Default / Registered Mobile App Citizens
+    default_citizens = [
+        {"user_id": "citizen_005", "name": "Tashi Lepcha", "phone": "9733022334", "lat": 27.3389, "lng": 88.6065, "hazard": "LANDSLIDE", "status": "VERIFIED"},
+        {"user_id": "citizen_004", "name": "Ananya Nair", "phone": "9447099001", "lat": 11.5542, "lng": 76.1264, "hazard": "DEBRIS FLOW", "status": "VERIFIED"},
+        {"user_id": "citizen_003", "name": "Rajesh Sharma", "phone": "9837077889", "lat": 30.5564, "lng": 79.5662, "hazard": "ROCKFALL", "status": "VERIFIED"},
+        {"user_id": "citizen_007", "name": "Rahul Sharma", "phone": "9876543210", "lat": 27.3380, "lng": 88.6050, "hazard": "LANDSLIDE", "status": "PENDING"}
+    ]
+
+    for c in default_citizens:
+        norm_phone = normalize_indian_phone(c["phone"])
+        if norm_phone and norm_phone not in extracted_dict:
+            extracted_dict[norm_phone] = {
+                "user_id": c["user_id"],
+                "citizen_name": c["name"],
+                "phone": norm_phone,
+                "phone_formatted": f"+91{norm_phone}",
+                "latitude": c["lat"],
+                "longitude": c["lng"],
+                "hazard_type": c["hazard"],
+                "report_code": f"REG-{c['user_id'].upper()}",
+                "status": c["status"],
+                "last_active": datetime.now(timezone.utc).isoformat(),
+                "source": "REGISTERED_PROFILE",
+                "priority_score": 60
+            }
+
+    citizens_list = list(extracted_dict.values())
+    return {
+        "success": True,
+        "total_extracted": len(citizens_list),
+        "citizens": citizens_list
+    }
+
+
+@app.post("/api/sms/send-citizen-direct")
+async def send_direct_citizen_sms(req: DirectCitizenSmsRequest):
+    """
+    Send a direct emergency SMS to an extracted citizen contact via Fast2SMS.
+    Logs dispatch record in SMS_ALERTS_LOG.
+    """
+    norm_phone = normalize_indian_phone(req.phone)
+    if not norm_phone:
+        return {"success": False, "error": f"Invalid Indian mobile number format: {req.phone}"}
+
+    default_msg = (
+        f"PRITHVI-SHIELD EMERGENCY ALERT:\n"
+        f"Dear {req.citizen_name or 'Citizen'},\n"
+        f"Update regarding report {req.report_code or 'INCIDENT'} ({req.hazard_type or 'LANDSLIDE'}).\n"
+        f"Response team has been notified. Stay in a safe area."
+    )
+    final_message = req.message or default_msg
+
+    res = trigger_sms_early_warning(
+        latitude=27.3389,
+        longitude=88.6065,
+        risk_level="HIGH",
+        risk_score=90.0,
+        is_test=True,
+        test_phone=norm_phone,
+        custom_message=final_message
+    )
+
+    if res.get("record"):
+        res["record"]["citizen_name"] = req.citizen_name or "Citizen"
+        res["record"]["report_code"] = req.report_code or "DIRECT"
+
+    return res
+
+

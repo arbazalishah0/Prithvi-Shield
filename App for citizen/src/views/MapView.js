@@ -26,8 +26,11 @@ export function renderMapView() {
         </div>
       </div>
 
-      <!-- Map Canvas -->
-      <div id="leaflet-map" class="absolute inset-0 z-0 w-full h-full bg-slate-200"></div>
+      <!-- Map Canvas & Inbuilt Google Map Container -->
+      <div class="absolute inset-0 z-0 w-full h-full bg-slate-200 relative">
+        <div id="leaflet-map" class="w-full h-full"></div>
+        <iframe id="gmap-inbuild-iframe" class="w-full h-full hidden border-0 absolute inset-0 z-10" src="" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      </div>
 
       <!-- UI Overlay Layer (Pointer Events None Container) -->
       <div class="relative z-20 flex flex-col h-full pointer-events-none pb-nav-safe pt-[calc(var(--status-bar-height,0px)+48px)]">
@@ -49,12 +52,30 @@ export function renderMapView() {
               </button>
             </div>
 
-            <!-- Quick Filter Chips -->
-            <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-              <button data-filter="all" class="map-chip active shrink-0 px-4 py-1.5 rounded-full bg-primary text-white text-xs font-bold shadow-md transition-all">All Intel</button>
-              <button data-filter="hazards" class="map-chip shrink-0 px-4 py-1.5 rounded-full bg-surface-container-lowest/90 backdrop-blur-sm text-on-surface text-xs font-semibold shadow-sm border border-outline-variant hover:bg-surface-container-low transition-all">Hazards (${hazards.length})</button>
-              <button data-filter="shelters" class="map-chip shrink-0 px-4 py-1.5 rounded-full bg-surface-container-lowest/90 backdrop-blur-sm text-on-surface text-xs font-semibold shadow-sm border border-outline-variant hover:bg-surface-container-low transition-all">Safe Shelters (${shelters.length})</button>
-              <button data-filter="routes" class="map-chip shrink-0 px-4 py-1.5 rounded-full bg-surface-container-lowest/90 backdrop-blur-sm text-on-surface text-xs font-semibold shadow-sm border border-outline-variant hover:bg-surface-container-low transition-all">Evac Routes</button>
+            <!-- Quick Filter Chips & Google Map Type Selector -->
+            <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1 items-center">
+              <button data-filter="all" class="map-chip active shrink-0 px-3.5 py-1.5 rounded-full bg-primary text-white text-xs font-bold shadow-md transition-all">All Intel</button>
+              <button data-filter="hazards" class="map-chip shrink-0 px-3.5 py-1.5 rounded-full bg-surface-container-lowest/90 backdrop-blur-sm text-on-surface text-xs font-semibold shadow-sm border border-outline-variant hover:bg-surface-container-low transition-all">Hazards (${hazards.length})</button>
+              <button data-filter="shelters" class="map-chip shrink-0 px-3.5 py-1.5 rounded-full bg-surface-container-lowest/90 backdrop-blur-sm text-on-surface text-xs font-semibold shadow-sm border border-outline-variant hover:bg-surface-container-low transition-all">Safe Shelters (${shelters.length})</button>
+
+              <div class="h-4 w-px bg-outline-variant/60 shrink-0 mx-1"></div>
+
+              <!-- Google Map Types -->
+              <button id="gmap-type-roadmap" class="gmap-type-btn shrink-0 px-3 py-1 rounded-full bg-blue-600 text-white text-[11px] font-bold shadow-sm flex items-center gap-1">
+                <span class="material-symbols-outlined text-[13px]">map</span> Standard
+              </button>
+              <button id="gmap-type-satellite" class="gmap-type-btn shrink-0 px-3 py-1 rounded-full bg-surface-container-lowest/90 backdrop-blur-sm text-on-surface text-[11px] font-bold border border-outline-variant hover:bg-surface-container-low shadow-sm flex items-center gap-1">
+                <span class="material-symbols-outlined text-[13px]">satellite_alt</span> Satellite
+              </button>
+              <button id="gmap-type-terrain" class="gmap-type-btn shrink-0 px-3 py-1 rounded-full bg-surface-container-lowest/90 backdrop-blur-sm text-on-surface text-[11px] font-bold border border-outline-variant hover:bg-surface-container-low shadow-sm flex items-center gap-1">
+                <span class="material-symbols-outlined text-[13px]">terrain</span> Terrain
+              </button>
+              <button id="gmap-type-traffic" class="gmap-type-btn shrink-0 px-3 py-1 rounded-full bg-surface-container-lowest/90 backdrop-blur-sm text-on-surface text-[11px] font-bold border border-outline-variant hover:bg-surface-container-low shadow-sm flex items-center gap-1">
+                <span class="material-symbols-outlined text-[13px]">traffic</span> Traffic
+              </button>
+              <button id="gmap-toggle-inbuild-mode" class="gmap-type-btn shrink-0 px-3 py-1 rounded-full bg-surface-container-lowest/90 backdrop-blur-sm text-on-surface text-[11px] font-bold border border-outline-variant hover:bg-surface-container-low shadow-sm flex items-center gap-1">
+                <span class="material-symbols-outlined text-[13px]">pin_drop</span> Inbuilt G-Map Frame
+              </button>
             </div>
           </div>
         </div>
@@ -173,32 +194,118 @@ export function bindMapEvents(container) {
     attributionControl: false
   }).setView([currentLocation.lat, currentLocation.lng], 14);
 
-  // Google Maps Tile Layers
-  const googleRoadmap = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+  // Google Maps Tile Layers with subdomain rotation
+  const googleRoadmap = L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
     maxZoom: 20,
+    subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
     attribution: '&copy; Google Maps'
   });
 
-  const googleHybrid = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+  const googleHybrid = L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
     maxZoom: 20,
+    subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
     attribution: '&copy; Google Maps Satellite'
   });
 
-  const cartoVoyager = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-    maxZoom: 19,
-    subdomains: 'abcd'
+  const googleTerrain = L.tileLayer('https://{s}.google.com/vt/lyrs=p&x={x}&y={y}&z={z}', {
+    maxZoom: 20,
+    subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+    attribution: '&copy; Google Maps Terrain'
+  });
+
+  const googleTraffic = L.tileLayer('https://{s}.google.com/vt/lyrs=m,traffic&x={x}&y={y}&z={z}', {
+    maxZoom: 20,
+    subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+    attribution: '&copy; Google Maps Traffic'
   });
 
   let currentTileLayer = googleRoadmap;
   currentTileLayer.addTo(mapInstance);
 
-  // Tile Layer Switcher
+  // Inbuilt Google Maps iframe mode switcher
+  const inbuildIframe = container.querySelector('#gmap-inbuild-iframe');
+  const inbuildModeBtn = container.querySelector('#gmap-toggle-inbuild-mode');
+  let isInbuildIframeActive = false;
+
+  function updateInbuildIframeSrc(lat, lng) {
+    if (inbuildIframe) {
+      inbuildIframe.src = `https://maps.google.com/maps?q=${lat},${lng}&z=14&output=embed`;
+    }
+  }
+
+  // Bind Google Map Type buttons
+  const typeRoadmapBtn = container.querySelector('#gmap-type-roadmap');
+  const typeSatBtn = container.querySelector('#gmap-type-satellite');
+  const typeTerrainBtn = container.querySelector('#gmap-type-terrain');
+  const typeTrafficBtn = container.querySelector('#gmap-type-traffic');
+
+  const gmapTypeBtns = [
+    { btn: typeRoadmapBtn, layer: googleRoadmap },
+    { btn: typeSatBtn, layer: googleHybrid },
+    { btn: typeTerrainBtn, layer: googleTerrain },
+    { btn: typeTrafficBtn, layer: googleTraffic }
+  ];
+
+  gmapTypeBtns.forEach(item => {
+    if (item.btn) {
+      item.btn.addEventListener('click', () => {
+        if (isInbuildIframeActive && inbuildIframe) {
+          inbuildIframe.classList.add('hidden');
+          isInbuildIframeActive = false;
+          if (inbuildModeBtn) {
+            inbuildModeBtn.classList.remove('bg-emerald-600', 'text-white');
+            inbuildModeBtn.classList.add('bg-surface-container-lowest/90', 'text-on-surface', 'border', 'border-outline-variant');
+          }
+        }
+        if (mapInstance && currentTileLayer) {
+          mapInstance.removeLayer(currentTileLayer);
+        }
+        currentTileLayer = item.layer;
+        currentTileLayer.addTo(mapInstance);
+
+        gmapTypeBtns.forEach(i => {
+          if (i.btn) {
+            i.btn.classList.remove('bg-blue-600', 'text-white');
+            i.btn.classList.add('bg-surface-container-lowest/90', 'text-on-surface', 'border', 'border-outline-variant');
+          }
+        });
+        item.btn.classList.remove('bg-surface-container-lowest/90', 'text-on-surface', 'border', 'border-outline-variant');
+        item.btn.classList.add('bg-blue-600', 'text-white');
+      });
+    }
+  });
+
+  if (inbuildModeBtn) {
+    inbuildModeBtn.addEventListener('click', () => {
+      isInbuildIframeActive = !isInbuildIframeActive;
+      if (isInbuildIframeActive) {
+        updateInbuildIframeSrc(store.state.currentLocation.lat, store.state.currentLocation.lng);
+        if (inbuildIframe) inbuildIframe.classList.remove('hidden');
+        gmapTypeBtns.forEach(i => {
+          if (i.btn) {
+            i.btn.classList.remove('bg-blue-600', 'text-white');
+            i.btn.classList.add('bg-surface-container-lowest/90', 'text-on-surface', 'border', 'border-outline-variant');
+          }
+        });
+        inbuildModeBtn.classList.remove('bg-surface-container-lowest/90', 'text-on-surface', 'border', 'border-outline-variant');
+        inbuildModeBtn.classList.add('bg-emerald-600', 'text-white');
+      } else {
+        if (inbuildIframe) inbuildIframe.classList.add('hidden');
+        inbuildModeBtn.classList.remove('bg-emerald-600', 'text-white');
+        inbuildModeBtn.classList.add('bg-surface-container-lowest/90', 'text-on-surface', 'border', 'border-outline-variant');
+        typeRoadmapBtn?.classList.add('bg-blue-600', 'text-white');
+      }
+    });
+  }
+
+  // Tile Layer Switcher Float Button
   const layerToggleBtn = container.querySelector('#map-layer-toggle-btn');
   let currentLayerIndex = 0;
   const tileLayers = [
     { name: 'Google Maps Street', layer: googleRoadmap, icon: 'map' },
     { name: 'Google Maps Satellite', layer: googleHybrid, icon: 'satellite_alt' },
-    { name: 'Tactical Topo', layer: cartoVoyager, icon: 'terrain' }
+    { name: 'Google Maps Terrain', layer: googleTerrain, icon: 'terrain' },
+    { name: 'Google Maps Traffic', layer: googleTraffic, icon: 'traffic' }
   ];
 
   if (layerToggleBtn) {

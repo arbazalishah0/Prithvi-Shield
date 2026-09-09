@@ -367,6 +367,14 @@
               </div>
               <span class="text-[10px] text-purple-400 font-mono">NH-10 / 66</span>
             </label>
+
+            <label class="flex items-center justify-between cursor-pointer p-1.5 rounded hover:bg-slate-800/40 transition">
+              <div class="flex items-center gap-2">
+                <input type="checkbox" id="layerCitizenReports" checked onchange="updateLayers()" class="rounded bg-slate-800 border-slate-700 text-cyan-400 focus:ring-0" />
+                <span class="text-slate-200 font-medium">📸 Live Citizen Photo Reports</span>
+              </div>
+              <span class="text-[10px] text-cyan-400 font-mono font-bold" id="gis-citizen-report-count">Live</span>
+            </label>
           </div>
         </div>
 
@@ -438,18 +446,25 @@
       <div class="absolute top-4 right-4 z-[400] flex flex-col gap-2">
         <div class="bg-[#090d16]/90 backdrop-blur-md border border-dark-border p-1 rounded-xl shadow-xl flex items-center gap-1">
           <button 
-            onclick="setBaseMap('dark')" 
-            id="btnBaseDark"
+            onclick="setBaseMap('gmap')" 
+            id="btnBaseGmap"
             class="px-2.5 py-1 text-xs font-mono font-bold rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 transition"
           >
-            Tactical Dark
+            Google Maps
           </button>
           <button 
             onclick="setBaseMap('satellite')" 
             id="btnBaseSat"
             class="px-2.5 py-1 text-xs font-mono font-bold rounded text-slate-400 hover:text-white transition"
           >
-            Satellite FLIR
+            Google Satellite
+          </button>
+          <button 
+            onclick="setBaseMap('dark')" 
+            id="btnBaseDark"
+            class="px-2.5 py-1 text-xs font-mono font-bold rounded text-slate-400 hover:text-white transition"
+          >
+            Tactical Dark
           </button>
           <button 
             onclick="setBaseMap('topo')" 
@@ -516,6 +531,7 @@
     var sensorLayer = L.layerGroup();
     var isobarsLayer = L.layerGroup();
     var evacRoutesLayer = L.layerGroup();
+    var citizenMarkerLayer = L.layerGroup();
     var liveClickMarker = null;
 
     var currentMinProb = 0.50;
@@ -530,10 +546,22 @@
         zoomControl: true
       });
 
-      // Base tile layers (Esri Dark Canvas: 100% Free, No API Key, No Watermark)
+      // Google Maps Tile Layers (Inbuilt Base Maps)
+      baseTileLayers.gmap = L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+        attribution: '&copy; Google Maps',
+        maxZoom: 20
+      });
+
+      baseTileLayers.satellite = L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+        attribution: '&copy; Google Maps Satellite',
+        maxZoom: 20
+      });
+
       baseTileLayers.dark = L.layerGroup([
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
-          attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
+          attribution: 'Tiles &copy; Esri',
           maxZoom: 16
         }),
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
@@ -541,17 +569,12 @@
         })
       ]);
 
-      baseTileLayers.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-        maxZoom: 18
-      });
-
       baseTileLayers.topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-        attribution: 'Map data: &copy; OpenStreetMap, SRTM | Map style: &copy; OpenTopoMap (CC-BY-SA)',
+        attribution: 'Map data: &copy; OpenStreetMap | Map style: &copy; OpenTopoMap',
         maxZoom: 17
       });
 
-      currentBaseTile = baseTileLayers.dark;
+      currentBaseTile = baseTileLayers.gmap;
       currentBaseTile.addTo(map);
 
       // Track cursor coordinates
@@ -570,6 +593,7 @@
       loadSensorNodes();
       loadEvacuationRoutes();
       loadRainfallIsobars();
+      loadCitizenHazardReports();
 
       // Initial focus on high risk sector (Sikkim / Gangtok)
       setTimeout(function() {
@@ -577,30 +601,16 @@
       }, 800);
     }
 
-    function updateSatelliteTileLayer() {
-      var mapboxKey = localStorage.getItem('MAPBOX_API_KEY');
-      if (mapboxKey) {
-        baseTileLayers.satellite = L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/{z}/{x}/{y}?access_token=' + mapboxKey, {
-          attribution: '&copy; Mapbox &copy; OpenStreetMap',
-          tileSize: 512,
-          zoomOffset: -1,
-          maxZoom: 19
-        });
-      } else {
-        baseTileLayers.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-          attribution: 'Tiles &copy; Esri',
-          maxZoom: 18
-        });
-      }
-    }
-
     function setBaseMap(type) {
-      map.removeLayer(currentBaseTile);
-      if (type === 'dark') {
-        currentBaseTile = baseTileLayers.dark;
+      if (currentBaseTile && map.hasLayer(currentBaseTile)) {
+        map.removeLayer(currentBaseTile);
+      }
+      if (type === 'gmap') {
+        currentBaseTile = baseTileLayers.gmap;
       } else if (type === 'satellite') {
-        updateSatelliteTileLayer();
         currentBaseTile = baseTileLayers.satellite;
+      } else if (type === 'dark') {
+        currentBaseTile = baseTileLayers.dark;
       } else if (type === 'topo') {
         currentBaseTile = baseTileLayers.topo;
       }
@@ -608,12 +618,13 @@
       currentBaseTile.addTo(map);
 
       // Update button styling
-      ['btnBaseDark', 'btnBaseSat', 'btnBaseTopo'].forEach(id => {
+      ['btnBaseGmap', 'btnBaseSat', 'btnBaseDark', 'btnBaseTopo'].forEach(id => {
         var el = document.getElementById(id);
-        el.className = "px-2.5 py-1 text-xs font-mono font-bold rounded text-slate-400 hover:text-white transition";
+        if (el) el.className = "px-2.5 py-1 text-xs font-mono font-bold rounded text-slate-400 hover:text-white transition";
       });
-      var activeBtn = type === 'dark' ? 'btnBaseDark' : (type === 'satellite' ? 'btnBaseSat' : 'btnBaseTopo');
-      document.getElementById(activeBtn).className = "px-2.5 py-1 text-xs font-mono font-bold rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 transition";
+      var activeBtn = type === 'gmap' ? 'btnBaseGmap' : (type === 'satellite' ? 'btnBaseSat' : (type === 'dark' ? 'btnBaseDark' : 'btnBaseTopo'));
+      var activeEl = document.getElementById(activeBtn);
+      if (activeEl) activeEl.className = "px-2.5 py-1 text-xs font-mono font-bold rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 transition";
     }
 
     // Load Landslide Heatmap & Markers from 8,532 dataset
@@ -885,6 +896,93 @@
       });
     }
 
+    // Load Citizen Uploaded Hazard Reports & Photos
+    async function loadCitizenHazardReports() {
+      citizenMarkerLayer.clearLayers();
+      let reports = [];
+      try {
+        const localData = JSON.parse(localStorage.getItem('safeground_citizen_uploaded_reports') || '[]');
+        reports = [...localData];
+      } catch (e) { console.warn('Local reports read error:', e); }
+
+      try {
+        const baseUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://127.0.0.1:8000' : `http://${window.location.hostname}:8000`;
+        const res = await fetch(`${baseUrl}/api/hazards/reports`);
+        if (res.ok) {
+          const apiData = await res.json();
+          if (apiData && apiData.reports) {
+            const mapById = new Map();
+            reports.forEach(r => mapById.set(r.report_code || r.id, r));
+            apiData.reports.forEach(r => mapById.set(r.report_code || r.report_id || r.id, { ...r, image: r.image_url || r.image }));
+            reports = Array.from(mapById.values());
+          }
+        }
+      } catch (err) { console.warn('FastAPI hazard fetch fallback in GIS map:', err); }
+
+      const countEl = document.getElementById('gis-citizen-report-count');
+      if (countEl) countEl.innerText = `${reports.length} Reports`;
+
+      reports.forEach(r => {
+        const lat = Number(r.lat || r.latitude || 27.3389);
+        const lng = Number(r.lng || r.longitude || 88.6065);
+        const imgUrl = r.image || r.image_url || 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800';
+        const title = r.title || r.category || r.hazard_type || 'Landslide Incident';
+        const code = r.report_code || r.report_id || 'PS-REPORT';
+        const status = r.status || 'UNDER_AI_VERIFICATION';
+        const citizen = r.user_name || r.citizen_name || 'Verified Citizen';
+
+        const cameraIcon = L.divIcon({
+          className: 'citizen-photo-icon',
+          html: `<div style="background:#090d16;border:2px solid #00e5ff;color:#00e5ff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 0 12px rgba(0,229,255,0.8);animation:pulse-animation 2s infinite;">📸</div>`,
+          iconSize: [28, 28],
+          iconAnchor: [14, 14]
+        });
+
+        const marker = L.marker([lat, lng], { icon: cameraIcon });
+        const popupContent = `
+          <div style="font-family:'Inter',sans-serif;width:260px;padding:4px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #1e293b;padding-bottom:6px;margin-bottom:6px;">
+              <span style="font-size:11px;font-weight:900;color:#00e5ff;">📸 CITIZEN PHOTO REPORT</span>
+              <span style="font-size:9px;font-weight:800;background:#00e5ff20;color:#00e5ff;border:1px solid #00e5ff;padding:1px 6px;border-radius:4px;">${status}</span>
+            </div>
+            <div style="width:100%;height:130px;border-radius:8px;overflow:hidden;margin-bottom:6px;border:1px solid #334155;">
+              <img src="${imgUrl}" style="width:100%;height:100%;object-cover:cover;" alt="Citizen Uploaded Photo" />
+            </div>
+            <div style="font-size:11px;color:#f8fafc;font-weight:700;margin-bottom:2px;">${title}</div>
+            <div style="font-size:10px;color:#94a3b8;font-family:'JetBrains Mono',monospace;line-height:1.5;">
+              <div>REPORT ID: <b style="color:#00e5ff">${code}</b></div>
+              <div>CITIZEN: ${citizen}</div>
+              <div>LOCATION: ${lat.toFixed(4)}°, ${lng.toFixed(4)}°</div>
+            </div>
+            <div style="margin-top:8px;display:flex;gap:4px;">
+              <a href="dashboard.html" style="background:#00e5ff;color:#090d16;font-weight:800;font-size:10px;padding:4px 8px;border-radius:6px;text-align:center;text-decoration:none;flex:1;">
+                VIEW IN COMMAND DASHBOARD &rarr;
+              </a>
+            </div>
+          </div>
+        `;
+        marker.bindPopup(popupContent);
+        citizenMarkerLayer.addLayer(marker);
+      });
+
+      if (document.getElementById('layerCitizenReports') && document.getElementById('layerCitizenReports').checked) {
+        citizenMarkerLayer.addTo(map);
+      }
+    }
+
+    // Real-time listener for cross-window citizen uploads
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', (e) => {
+        if (e.key === 'safeground_citizen_uploaded_reports') {
+          loadCitizenHazardReports();
+        }
+      });
+      if ('BroadcastChannel' in window) {
+        const bc = new BroadcastChannel('safeground_citizen_reports_channel');
+        bc.onmessage = () => { loadCitizenHazardReports(); };
+      }
+    }
+
     // Layer Update Controller
     function updateLayers() {
       if (document.getElementById('layerHeatmap').checked) {
@@ -922,13 +1020,20 @@
       } else {
         if (map.hasLayer(evacRoutesLayer)) map.removeLayer(evacRoutesLayer);
       }
+
+      if (document.getElementById('layerCitizenReports') && document.getElementById('layerCitizenReports').checked) {
+        if (!map.hasLayer(citizenMarkerLayer)) map.addLayer(citizenMarkerLayer);
+      } else {
+        if (map.hasLayer(citizenMarkerLayer)) map.removeLayer(citizenMarkerLayer);
+      }
     }
 
     function toggleAllLayers() {
       var anyChecked = document.getElementById('layerHeatmap').checked;
       var newVal = !anyChecked;
-      ['layerHeatmap', 'layerCriticalMarkers', 'layerModerateMarkers', 'layerSensors', 'layerIsobars', 'layerEvacRoutes'].forEach(id => {
-        document.getElementById(id).checked = newVal;
+      ['layerHeatmap', 'layerCriticalMarkers', 'layerModerateMarkers', 'layerSensors', 'layerIsobars', 'layerEvacRoutes', 'layerCitizenReports'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.checked = newVal;
       });
       updateLayers();
     }

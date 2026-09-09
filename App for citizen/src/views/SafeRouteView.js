@@ -132,8 +132,10 @@ export function bindSafeRouteEvents(container) {
     attributionControl: false
   }).setView([currentLocation.lat, currentLocation.lng], 13);
 
-  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
-    maxZoom: 17
+  L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+    maxZoom: 20,
+    subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+    attribution: '&copy; Google Maps'
   }).addTo(routeMapInstance);
 
   // User Marker
