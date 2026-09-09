@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html class="h-full dark" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>PRITHVI-SHIELD Command — AI Landslide Early Warning & 3D Digital Twin Platform (SIH 2026)</title>
+  
+  <!-- Google Fonts & Material Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+  <!-- Three.js & GSAP for 3D Landslide & Earth Globe Intro -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "dark-bg": "#070a11",
+            "dark-surface": "#0d1322",
+            "dark-panel": "#111827",
+            "dark-card": "#0f172a",
+            "dark-border": "#1e293b",
+            "dark-border-light": "#334155",
+            "tactical-gold": "#f59e0b",
+            "tactical-gold-hover": "#fbbf24",
+            "tactical-cyan": "#00e5ff",
+            "tactical-cyan-dark": "#0284c7",
+            "tactical-salmon": "#f87171",
+            "tactical-salmon-dark": "#ef4444",
+            "tactical-pink": "#fb7185",
+            "primary": "#000a1e",
+            "primary-container": "#002147",
+            "secondary": "#b6171e",
+            "secondary-container": "#da3433"
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .bg-grid-pattern {
+      background-image: 
+        linear-gradient(to right, rgba(56, 189, 248, 0.05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(56, 189, 248, 0.05) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+    #intro-webgl-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      pointer-events: none;
+    }
+  </style>
+
+  <!-- Load Landslide Dataset & Inference Engine -->
+  <script src="assets/data/landslide_points_data.js"></script>
+  <!-- Real-Time Emergency Alerts & Universal Slide-Bar Drawer -->
+  <script src="assets/js/live_emergency_alerts.js"></script>
+  <script src="assets/js/nav_sidebar.js"></script>
+</head>
+
+<body class="bg-[#070a11] text-slate-100 min-h-screen flex flex-col font-sans overflow-x-hidden selection:bg-cyan-500 selection:text-slate-950 scroll-smooth">
+
+  <!-- ══ TOP GLOBAL NAVIGATION BAR ══ -->
+  <nav class="fixed top-0 w-full z-50 h-14 bg-[#070a11]/95 backdrop-blur-md border-b border-dark-border px-4 sm:px-6 flex items-center justify-between shadow-lg flex-nowrap whitespace-nowrap overflow-x-hidden">
+    <div class="flex items-center gap-3 shrink-0 flex-nowrap">
+      <button onclick="window.prahariToggleSidebar()" class="prahari-slidebar-toggle-btn" title="Open Command Slide-Bar (Ctrl+B)">
+        <span class="material-symbols-outlined text-sm">menu</span>
+        <span class="text-xs font-black tracking-wide uppercase">MENU</span>
+      </button>
+
+      <a href="index.html" class="flex items-center gap-2 group shrink-0">
+        <img src="assets/logo.jpg" alt="PRITHVI-SHIELD Logo" class="w-8 h-8 object-contain rounded-lg border border-cyan-400/40 group-hover:scale-105 transition-transform" />
+        <div class="flex flex-col leading-tight">
+          <span class="font-extrabold text-sm tracking-tight text-white flex items-center gap-1">
+            PRITHVI-SHIELD <span class="text-cyan-400 font-bold">Command</span>
+          </span>
+          <span class="text-[9px] font-mono text-tactical-gold tracking-widest uppercase">SIH 2026 &bull; Geodynamics</span>
+        </div>
+      </a>
+    </div>
+
+    <!-- Main Navigation Links - Single line horizontal layout -->
+    <div class="hidden lg:flex items-center gap-1 text-xs font-semibold text-slate-300 flex-nowrap whitespace-nowrap">
+      <a class="text-cyan-400 font-bold px-2.5 py-1.5 rounded bg-cyan-950/60 border border-cyan-500/30 flex items-center gap-1 transition" href="#intro-section">
+        <span class="material-symbols-outlined text-xs">public</span> 3D Earth
+      </a>
+      <a class="hover:text-white hover:bg-slate-800/60 transition px-2.5 py-1.5 rounded" href="dashboard.html">Dashboard</a>
+      <a class="hover:text-cyan-400 hover:bg-slate-800/60 transition px-2.5 py-1.5 rounded" href="gis_map.html">GIS Maps</a>
+      <a class="hover:text-purple-400 hover:bg-slate-800/60 transition px-2.5 py-1.5 rounded" href="ai_risk_engine.html">AI Risk Engine</a>
+      <a class="hover:text-white hover:bg-slate-800/60 transition px-2.5 py-1.5 rounded" href="digital_twin.html">3D Digital Twin</a>
+      <a class="text-red-400 font-bold hover:bg-red-950/40 hover:text-red-300 border border-red-500/20 transition px-2.5 py-1.5 rounded flex items-center gap-1" href="alert_center.html">
+        <span class="material-symbols-outlined text-xs text-red-400 animate-pulse">campaign</span> Alert Center
+      </a>
+      <a class="hover:text-amber-300 hover:bg-slate-800/60 transition px-2.5 py-1.5 rounded flex items-center gap-1" href="evacuation_rescue.html">
+        <span class="material-symbols-outlined text-xs text-amber-400">directions_run</span> Evacuation
+      </a>
+      <a class="hover:text-emerald-400 hover:bg-slate-800/60 transition px-2.5 py-1.5 rounded" href="citizen_safety.html">Citizen Safety</a>
+    </div>
+
+    <div class="flex items-center gap-2 shrink-0 flex-nowrap">
+      <a href="dashboard.html" class="bg-cyan-500/10 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-500 hover:text-slate-950 font-bold text-xs px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition">
+        <span class="material-symbols-outlined text-sm">dashboard</span> Hub
+      </a>
+      <a href="alert_center.html" class="bg-[#f87171] hover:bg-[#ef4444] text-slate-950 font-black text-xs px-3 py-1.5 rounded-lg flex items-center gap-1 uppercase tracking-wider transition shadow-md shadow-red-500/30">
+        <span class="material-symbols-outlined text-sm">campaign</span> EMERGENCY
+      </a>
+    </div>
+  </nav>
+
+  <!-- ═════════════════════════════════════════════════════════════════════════════ -->
+  <!-- ══ SECTION 1: FIRST-OPEN 3D EARTH GLOBE & LANDSLIDE GEODYNAMICS INTRO ══ -->
+  <!-- ═════════════════════════════════════════════════════════════════════════════ -->
+  <section id="intro-section" class="relative w-full min-h-screen flex flex-col justify-between pt-16 pb-8 px-4 sm:px-8 md:px-12 bg-[#070a11] overflow-hidden border-b border-dark-border">
+    
+    <!-- Three.js 3D WebGL Interactive Earth & Terrain Canvas -->
+    <canvas id="intro-webgl-canvas"></canvas>
+
+    <!-- Top Floating Intro HUD / Telemetry -->
+    <div class="relative z-20 max-w-7xl mx-auto w-full flex flex-wrap items-center justify-between gap-4 mt-2">
+      <div class="inline-flex items-center gap-2 bg-[#0d1322]/85 backdrop-blur-md px-4 py-1.5 rounded-full border border-cyan-500/30 shadow-lg">
+        <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
+        <span class="text-xs font-mono font-bold text-cyan-300 uppercase tracking-widest">
+          3D EARTH GLOBE &amp; GEODYNAMICS &bull; SIH 2026
+        </span>
+      </div>
+
+      <!-- Quick Floating Mode Switcher & 3D Controls -->
+      <div class="flex flex-wrap items-center gap-2 bg-[#0d1322]/85 backdrop-blur-md px-3 py-1.5 rounded-2xl border border-dark-border text-xs font-mono">
+        <button id="intro-btn-earth" onclick="setIntroCameraView('earth')" class="px-3 py-1 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 flex items-center gap-1 transition shadow-sm">
+          <span class="material-symbols-outlined text-xs text-cyan-400">public</span> 3D Earth
+        </button>
+        <button id="intro-btn-terrain" onclick="setIntroCameraView('default')" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1 transition">
+          <span class="material-symbols-outlined text-xs text-amber-400">terrain</span> Mountain Slope
+        </button>
+        <button id="intro-btn-satview" onclick="setIntroCameraView('satellite')" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1 transition">
+          <span class="material-symbols-outlined text-xs text-sky-400">satellite_alt</span> InSAR Satellite
+        </button>
+        <button id="intro-btn-rain" onclick="toggleIntroRain()" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1 transition">
+          <span class="material-symbols-outlined text-xs text-sky-400">rainy</span> Rain
+        </button>
+        <button id="intro-btn-sat" onclick="toggleIntroSaturation()" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1 transition">
+          <span class="material-symbols-outlined text-xs text-emerald-400">water_drop</span> Saturation
+        </button>
+        <button id="intro-btn-slip" onclick="triggerIntroSlopeSlip()" class="px-3 py-1 rounded-lg bg-red-950/50 hover:bg-red-900/60 text-red-300 border border-red-500/40 flex items-center gap-1 transition">
+          <span class="material-symbols-outlined text-xs text-red-400">landslide</span> Trigger Slip
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Intro Content Cards Overlay -->
+    <div class="relative z-20 max-w-7xl mx-auto w-full my-auto py-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+      
+      <!-- Left Column: Landslide Geodynamics & Earth Surveillance Narrative -->
+      <div class="lg:col-span-7 bg-[#0d1322]/90 backdrop-blur-xl p-8 sm:p-10 rounded-3xl border border-cyan-500/30 shadow-2xl space-y-6">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-mono font-bold text-tactical-salmon tracking-widest uppercase bg-red-500/10 border border-red-500/30 px-3 py-1 rounded-md">
+            🌍 EARTH REMOTE SENSING &amp; GEOTECHNICS
+          </span>
+          <span id="intro-fs-badge" class="text-xs font-mono font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-md">
+            FoS = 1.42 (STABLE)
+          </span>
+        </div>
+
+        <h1 class="text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight">
+          3D EARTH INTELLIGENCE &amp; <br/>
+          <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-amber-400">
+            LANDSLIDE GEODYNAMICS
+          </span>
+        </h1>
+
+        <p class="text-sm sm:text-base text-slate-300 leading-relaxed">
+          From satellite InSAR orbit down to microscopic pore-water pressure, PRITHVI-SHIELD continuously scans India's tectonic terrain. Satellite radar interferometry detects millimeter-scale ground displacement while physics-informed ML predicts catastrophic slope ruptures before they strike.
+        </p>
+
+        <!-- Physics Formula & Metrics -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <div class="bg-[#05080e] p-3.5 rounded-xl border border-dark-border font-mono text-xs space-y-1">
+            <span class="text-[10px] text-tactical-gold font-bold uppercase">Mohr-Coulomb Criterion</span>
+            <div class="text-white font-bold text-sm">τ = c' + (σ<sub>n</sub> - u) · tan(φ')</div>
+            <span class="text-[10px] text-slate-400 block">Shear resistance drops as pore pressure <em>u</em> rises</span>
+          </div>
+          <div class="bg-[#05080e] p-3.5 rounded-xl border border-dark-border font-mono text-xs space-y-1">
+            <span class="text-[10px] text-cyan-400 font-bold uppercase">Earth Orbit InSAR Telemetry</span>
+            <div class="text-white font-bold text-sm">Δd ≈ (λ / 4π) · Δφ</div>
+            <span class="text-[10px] text-slate-400 block">Sentinel-1 millimeter surface displacement</span>
+          </div>
+        </div>
+
+        <!-- Hotspot Tags -->
+        <div class="flex flex-wrap gap-2 text-xs font-mono">
+          <span class="bg-red-500/15 text-red-300 border border-red-500/30 px-2.5 py-1 rounded-md">Wayanad Debris Torrent (2024)</span>
+          <span class="bg-amber-500/15 text-amber-300 border border-amber-500/30 px-2.5 py-1 rounded-md">Joshimath Subsidence</span>
+          <span class="bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 px-2.5 py-1 rounded-md">Kedarnath Corridor</span>
+          <span class="bg-purple-500/15 text-purple-300 border border-purple-500/30 px-2.5 py-1 rounded-md">Sikkim-Darjeeling Thrust</span>
+        </div>
+
+        <!-- Primary Action CTA -->
+        <div class="flex flex-wrap items-center gap-4 pt-2">
+          <a 
+            href="#command-hub" 
+            class="bg-gradient-to-r from-cyan-400 via-sky-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 font-black text-sm sm:text-base px-8 py-4 rounded-2xl transition shadow-xl shadow-cyan-500/30 flex items-center gap-3 transform hover:-translate-y-0.5"
+          >
+            <span class="material-symbols-outlined text-xl">rocket_launch</span>
+            <span>ENTER PRITHVI-SHIELD COMMAND PLATFORM</span>
+            <span class="material-symbols-outlined text-lg">arrow_downward</span>
+          </a>
+          
+          <a 
+            href="landslide_intro.html" 
+            class="bg-[#090d16] hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 px-5 py-4 rounded-2xl font-bold text-xs sm:text-sm flex items-center gap-2 transition"
+          >
+            <span class="material-symbols-outlined text-sm">open_in_new</span> Dedicated 3D View
+          </a>
+        </div>
+      </div>
+
+      <!-- Right Column: Live Earth Surveillance & Rupture Diagnostics Widget -->
+      <div class="lg:col-span-5 bg-[#0d1322]/85 backdrop-blur-xl p-6 rounded-3xl border border-dark-border shadow-2xl space-y-4">
+        <div class="flex items-center justify-between border-b border-dark-border pb-3">
+          <span class="text-xs font-mono font-bold text-cyan-400 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span> 3D SCENE: EARTH &amp; TERRAIN DYNAMICS
+          </span>
+          <span id="intro-rain-val" class="text-xs font-mono font-bold text-slate-400">Rainfall: 0 mm/h</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 text-xs font-mono">
+          <div class="bg-[#05080e] p-3 rounded-xl border border-dark-border">
+            <span class="text-[10px] text-slate-400 block uppercase">Critical Slope</span>
+            <span class="text-base font-black text-red-400">&gt; 35° Rupture</span>
+          </div>
+          <div class="bg-[#05080e] p-3 rounded-xl border border-dark-border">
+            <span class="text-[10px] text-slate-400 block uppercase">Surge Velocity</span>
+            <span class="text-base font-black text-tactical-gold">&gt; 80 km/h</span>
+          </div>
+          <div class="bg-[#05080e] p-3 rounded-xl border border-dark-border">
+            <span class="text-[10px] text-slate-400 block uppercase">Active Telemetry</span>
+            <span class="text-base font-black text-cyan-400">8,532 Nodes</span>
+          </div>
+          <div class="bg-[#05080e] p-3 rounded-xl border border-dark-border">
+            <span class="text-[10px] text-slate-400 block uppercase">Spatial ROC-AUC</span>
+            <span class="text-base font-black text-emerald-400">0.8524</span>
+          </div>
+        </div>
+
+        <!-- 3D Views Quick Buttons -->
+        <div class="bg-cyan-950/30 border border-cyan-500/20 p-4 rounded-xl text-xs text-cyan-200/90 leading-relaxed space-y-2">
+          <div>🌍 <strong class="text-cyan-300">Interactive 3D Earth Globe:</strong> Rotating planet Earth with glowing atmospheric aura and active Indian hazard beacons.</div>
+          <div class="flex gap-2 pt-1">
+            <button onclick="setIntroCameraView('earth')" class="px-2.5 py-1 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-400 font-mono text-[11px] font-bold">Focus Earth</button>
+            <button onclick="setIntroCameraView('default')" class="px-2.5 py-1 rounded bg-slate-800 text-slate-300 border border-slate-700 font-mono text-[11px]">Focus Mountain</button>
+            <button onclick="setIntroCameraView('scarp')" class="px-2.5 py-1 rounded bg-slate-800 text-slate-300 border border-slate-700 font-mono text-[11px]">Slip Scarp</button>
+          </div>
+        </div>
+
+        <div class="pt-1">
+          <a 
+            href="#command-hub" 
+            class="w-full bg-[#111827] hover:bg-slate-800 text-slate-200 hover:text-white border border-cyan-500/30 py-3 rounded-xl text-center block font-mono font-bold text-xs uppercase tracking-wider transition"
+          >
+            Scroll Down to Access Command Hub &darr;
+          </a>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Bottom Scroll Indicator Ribbon -->
+    <div class="relative z-20 max-w-7xl mx-auto w-full flex items-center justify-between text-xs font-mono text-slate-400 border-t border-dark-border pt-4">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-sm text-cyan-400 animate-bounce">arrow_downward</span>
+        <span>Scroll to explore full PRITHVI-SHIELD Command System</span>
+      </div>
+      <div class="hidden sm:flex items-center gap-4 text-[11px]">
+        <span>&bull; 3D Earth Globe</span>
+        <span>&bull; InSAR Sentinel Radar</span>
+        <span>&bull; Random Forest ML</span>
+        <span>&bull; Factor of Safety</span>
+      </div>
+    </div>
+
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- ══ SECTION 2: PRITHVI-SHIELD FULL COMMAND PLATFORM & DASHBOARDS ══ -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <div id="command-hub" class="flex flex-col w-full relative z-20 bg-[#070a11]">
+    
+    <!-- Hero Operational Command Banner -->
+    <section class="relative w-full min-h-[600px] flex items-center justify-center bg-[#090d16] overflow-hidden border-b border-dark-border py-16">
+      <div class="absolute inset-0 bg-grid-pattern opacity-60"></div>
+      
+      <div class="max-w-7xl mx-auto px-6 md:px-12 w-full relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        
+        <!-- Hero Left Column -->
+        <div class="lg:col-span-7 flex flex-col gap-5 items-start text-left bg-[#0d1322]/90 p-8 md:p-10 rounded-2xl border border-dark-border shadow-2xl backdrop-blur-md">
+          <div class="inline-flex items-center gap-2 bg-[#070a12] px-3.5 py-1 rounded-full border border-cyan-500/30">
+            <span class="w-2.5 h-2.5 rounded-full bg-tactical-salmon animate-ping"></span>
+            <span class="text-[11px] font-mono font-bold text-cyan-300 uppercase tracking-widest">BHU-RAKSHA AI PLATFORM ACTIVE (SIH 2026)</span>
+          </div>
+
+          <h2 class="text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight">
+            AI Landslide Susceptibility &amp; <br/>
+            <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-amber-400">Early Warning GIS Matrix</span>
+          </h2>
+
+          <p class="text-sm sm:text-base text-slate-300 max-w-2xl border-l-4 border-cyan-400 pl-4 leading-relaxed font-sans">
+            Spatially validated Random Forest machine learning models (ROC-AUC: 0.8524), 8,532 India-wide monitoring nodes, infinite-slope geotechnical physics, and 3D digital twins for Himalayan and Western Ghat hazard mitigation.
+          </p>
+
+          <div class="flex flex-wrap gap-3 mt-2 w-full sm:w-auto">
+            <a href="gis_map.html" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs sm:text-sm px-6 py-3.5 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20">
+              <span class="material-symbols-outlined text-base">map</span> Live GIS Risk Map
+            </a>
+            <a href="ai_risk_engine.html" class="bg-tactical-gold hover:bg-amber-400 text-slate-950 font-black text-xs sm:text-sm px-6 py-3.5 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20">
+              <span class="material-symbols-outlined text-base">psychology</span> AI Risk Engine
+            </a>
+            <a href="digital_twin.html" class="bg-[#090d16] text-white border border-cyan-500/40 hover:bg-cyan-950/40 font-bold text-xs sm:text-sm px-6 py-3.5 rounded-xl transition flex items-center justify-center gap-2 shadow-sm">
+              <span class="material-symbols-outlined text-base">3d_rotation</span> 3D Digital Twin
+            </a>
+          </div>
+        </div>
+
+        <!-- Hero Right Column: Tactical Drone Recon Preview Node -->
+        <div class="lg:col-span-5 h-[480px] w-full relative rounded-2xl border-2 border-cyan-500/40 bg-[#05080e] overflow-hidden shadow-2xl flex flex-col group">
+          <div class="h-10 bg-[#090d16] border-b border-dark-border flex items-center justify-between px-4 text-xs font-mono text-slate-300">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-sm text-cyan-400">videocam</span>
+              <span class="font-bold">LIVE UAV-ALPHA-9 RECON STREAM</span>
+            </div>
+            <span class="text-tactical-salmon font-bold flex items-center gap-1">
+              <span class="w-2 h-2 rounded-full bg-tactical-salmon animate-pulse"></span> REC 1080p
+            </span>
+          </div>
+
+          <div class="flex-grow relative overflow-hidden flex items-center justify-center">
+            <img 
+              src="assets/landslide_recon.jpg" 
+              alt="Drone Recon Preview" 
+              class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+            />
+            
+            <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/20 p-5 flex flex-col justify-between">
+              <div class="flex justify-between items-start">
+                <span class="bg-black/80 text-amber-400 font-mono text-[10px] px-2 py-1 rounded border border-amber-400/40">
+                  ⚠️ UNSTABLE SLOPE (88% CONF)
+                </span>
+                <span class="bg-black/80 text-tactical-salmon font-mono text-[10px] px-2 py-1 rounded border border-red-400/40">
+                  👤 SURVIVOR [94%]
+                </span>
+              </div>
+
+              <div class="space-y-3">
+                <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+                  <div class="bg-black/80 p-2.5 rounded border border-slate-800">
+                    <span class="text-slate-400 text-[10px] block">TARGET ALTITUDE</span>
+                    <span class="text-cyan-400 font-bold text-sm">458m AGL</span>
+                  </div>
+                  <div class="bg-black/80 p-2.5 rounded border border-slate-800">
+                    <span class="text-slate-400 text-[10px] block">DISPLACEMENT</span>
+                    <span class="text-tactical-gold font-bold text-sm">45,200 m³</span>
+                  </div>
+                </div>
+
+                <a 
+                  href="ai_intelligence.html" 
+                  class="w-full bg-tactical-cyan hover:bg-cyan-300 text-slate-950 font-black text-xs py-2.5 rounded-lg text-center block uppercase tracking-wider shadow-lg shadow-cyan-500/30 transition"
+                >
+                  Enter Sector 4 Reconnaissance HUD &rarr;
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Live Landslide Project Statistics Bar -->
+    <section class="w-full bg-[#070a11] border-b border-dark-border py-6 px-6 md:px-12 shadow-sm">
+      <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6">
+        
+        <div class="flex items-center gap-3 bg-[#0d1322] p-4 rounded-xl border border-dark-border">
+          <div class="h-10 w-10 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0 border border-cyan-500/30">
+            <span class="material-symbols-outlined">map</span>
+          </div>
+          <div>
+            <span class="text-[10px] font-mono text-slate-400 uppercase">Monitored Points</span>
+            <div class="text-xl font-black text-cyan-400 font-mono">8,532 Nodes</div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 bg-[#0d1322] p-4 rounded-xl border border-dark-border">
+          <div class="h-10 w-10 rounded-lg bg-red-500/20 text-tactical-salmon flex items-center justify-center shrink-0 border border-red-500/30">
+            <span class="material-symbols-outlined">crisis_alert</span>
+          </div>
+          <div>
+            <span class="text-[10px] font-mono text-slate-400 uppercase">High / Very High Risk</span>
+            <div class="text-xl font-black text-tactical-salmon font-mono">4,229 Points</div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 bg-[#0d1322] p-4 rounded-xl border border-dark-border">
+          <div class="h-10 w-10 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/30">
+            <span class="material-symbols-outlined">psychology</span>
+          </div>
+          <div>
+            <span class="text-[10px] font-mono text-slate-400 uppercase">Spatial ROC-AUC</span>
+            <div class="text-xl font-black text-tactical-gold font-mono">0.8524</div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 bg-[#0d1322] p-4 rounded-xl border border-dark-border">
+          <div class="h-10 w-10 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
+            <span class="material-symbols-outlined">shield</span>
+          </div>
+          <div>
+            <span class="text-[10px] font-mono text-slate-400 uppercase">Protected Population</span>
+            <div class="text-xl font-black text-emerald-400 font-mono">1.48 Million</div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ══ INTERACTIVE SLOPE FAILURE SIMULATION WIDGET ══ -->
+    <section class="py-14 px-6 md:px-12 max-w-7xl mx-auto w-full border-b border-dark-border">
+      <div class="bg-gradient-to-br from-[#0d1322] via-[#090e1a] to-[#070a12] border-2 border-cyan-500/30 rounded-3xl p-8 md:p-12 shadow-2xl relative overflow-hidden">
+        
+        <div class="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+          
+          <!-- Left Column: Slope Geomechanics -->
+          <div class="lg:col-span-6 space-y-5">
+            <div class="inline-flex items-center gap-2 bg-[#070a12] px-3.5 py-1 rounded-full border border-cyan-500/40">
+              <span class="material-symbols-outlined text-xs text-cyan-400">public</span>
+              <span class="text-[11px] font-mono font-bold text-cyan-300 uppercase tracking-wider">GEOMECHANICS &amp; SLOPE INSTABILITY</span>
+            </div>
+
+            <h3 class="text-2xl sm:text-4xl font-black text-white tracking-tight leading-tight">
+              Pore Pressure, Shear Stress &amp; <br/>
+              <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-amber-400">
+                Slip Failure Physics
+              </span>
+            </h3>
+
+            <p class="text-sm text-slate-300 leading-relaxed">
+              Catastrophic landslides occur when intense monsoonal precipitation elevates subterranean pore-water pressure ($u$), drastically reducing normal effective stress ($\sigma_n - u$) along critical shear planes.
+            </p>
+
+            <div class="bg-[#05080e] p-4 rounded-xl border border-dark-border space-y-2 font-mono text-xs">
+              <div class="text-[10px] text-tactical-gold font-bold uppercase tracking-wider">Mohr-Coulomb Failure Criterion</div>
+              <div class="text-white font-bold text-sm sm:text-base">$\tau = c' + (\sigma_n - u) \tan\phi'$</div>
+              <div class="text-[11px] text-slate-400 font-sans">
+                When driving shear stress $\tau_{\text{driving}}$ exceeds available shear strength $\tau$, the slope undergoes rapid translational rupture or rotational slump.
+              </div>
+            </div>
+
+            <div class="flex flex-wrap gap-3 pt-2">
+              <a href="gis_map.html" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs sm:text-sm px-6 py-3 rounded-xl transition flex items-center gap-2 shadow-lg shadow-cyan-500/25">
+                <span class="material-symbols-outlined text-base">map</span> View 8,532 Node GIS Map
+              </a>
+              <a href="ai_risk_engine.html" class="bg-[#111827] text-slate-200 hover:text-white border border-slate-700 hover:border-cyan-400 font-bold text-xs sm:text-sm px-5 py-3 rounded-xl transition flex items-center gap-2">
+                <span class="material-symbols-outlined text-base">psychology</span> Physics Simulator
+              </a>
+            </div>
+          </div>
+
+          <!-- Right Column: Interactive Slope Stability Simulation Widget -->
+          <div class="lg:col-span-6 bg-[#070a12] border border-cyan-500/30 rounded-2xl p-6 shadow-xl space-y-5">
+            <div class="flex items-center justify-between border-b border-dark-border pb-3">
+              <span class="font-mono text-xs font-bold text-cyan-400 flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span> REAL-TIME SLOPE FAILURE SIMULATOR
+              </span>
+              <span id="home-sim-status" class="text-xs font-mono font-black px-2.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+                STABLE (FoS = 1.48)
+              </span>
+            </div>
+
+            <!-- Dynamic 2D/3D Slope Canvas -->
+            <div class="relative h-44 w-full bg-[#05080e] rounded-xl border border-dark-border overflow-hidden">
+              <canvas id="home-slope-canvas" class="w-full h-full"></canvas>
+              <div class="absolute bottom-2 left-3 text-[10px] font-mono text-slate-400 bg-black/60 px-2 py-0.5 rounded">
+                Cross-Section: Stratified Bedrock &bull; Slip Arc Angle: <span id="home-canvas-angle" class="text-cyan-400 font-bold">32°</span>
+              </div>
+            </div>
+
+            <!-- Sliders for Interactive Simulation -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
+              <div class="space-y-1.5">
+                <div class="flex justify-between text-slate-300">
+                  <span>Slope Incline (β):</span>
+                  <span id="home-val-slope" class="text-cyan-400 font-bold">32°</span>
+                </div>
+                <input id="home-input-slope" type="range" min="15" max="55" value="32" class="w-full accent-cyan-400 h-1.5 bg-slate-800 rounded cursor-pointer" oninput="updateHomeSim()" />
+              </div>
+
+              <div class="space-y-1.5">
+                <div class="flex justify-between text-slate-300">
+                  <span>24h Rainfall:</span>
+                  <span id="home-val-rain" class="text-tactical-gold font-bold">45 mm</span>
+                </div>
+                <input id="home-input-rain" type="range" min="0" max="250" value="45" class="w-full accent-amber-400 h-1.5 bg-slate-800 rounded cursor-pointer" oninput="updateHomeSim()" />
+              </div>
+            </div>
+
+            <!-- Real-time Computed Values Bar -->
+            <div class="grid grid-cols-3 gap-2 text-center bg-[#0d1322] p-3 rounded-xl border border-dark-border text-xs font-mono">
+              <div>
+                <span class="text-[10px] text-slate-400 block">Effective Stress</span>
+                <span id="home-val-stress" class="text-white font-bold">68.4 kPa</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-slate-400 block">Pore Pressure (u)</span>
+                <span id="home-val-pore" class="text-cyan-400 font-bold">18.2 kPa</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-slate-400 block">Factor of Safety (FoS)</span>
+                <span id="home-val-fs" class="text-emerald-400 font-bold text-sm">1.48</span>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Platform Modules Grid -->
+    <section class="py-12 px-6 md:px-12 max-w-7xl mx-auto w-full space-y-6">
+      <div class="flex justify-between items-end">
+        <div>
+          <h2 class="text-2xl font-black text-white">PRITHVI-SHIELD Core Disaster Intelligence Modules</h2>
+          <p class="text-xs text-slate-400 mt-1">Integrated AI machine learning models, physics stability engine, and multi-hazard GIS mapping (SIH 2026).</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        <!-- Module 0: 3D Landslide Geodynamics & Physics Intro -->
+        <a href="landslide_intro.html" class="bg-[#0d1322] hover:bg-[#11192e] border border-cyan-500/50 hover:border-cyan-400 p-6 rounded-2xl transition space-y-4 group shadow-lg shadow-cyan-500/10 flex flex-col justify-between relative overflow-hidden">
+          <div class="absolute top-0 right-0 bg-cyan-500 text-slate-950 font-mono font-black text-[9px] px-2.5 py-1 rounded-bl-lg uppercase tracking-wider">
+            3D WebGL
+          </div>
+          <div class="space-y-3">
+            <div class="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center border border-cyan-500/30 group-hover:scale-110 transition-transform">
+              <span class="material-symbols-outlined">public</span>
+            </div>
+            <h3 class="text-lg font-bold text-white group-hover:text-cyan-400 transition">3D Earth &amp; Landslide Geodynamics</h3>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              Interactive WebGL Earth globe, InSAR satellite orbits, pore-water pressure triggers, rupture scarp visualization, and Himalayan hazard mechanics.
+            </p>
+          </div>
+          <span class="text-xs font-mono font-bold text-cyan-400 flex items-center gap-1">Launch 3D Experience &rarr;</span>
+        </a>
+
+        <!-- Module 1: Live GIS Landslide Map -->
+        <a href="gis_map.html" class="bg-[#0d1322] hover:bg-[#11192e] border border-cyan-500/40 hover:border-cyan-400 p-6 rounded-2xl transition space-y-4 group shadow-sm flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center border border-cyan-500/30 group-hover:scale-110 transition-transform">
+              <span class="material-symbols-outlined">map</span>
+            </div>
+            <h3 class="text-lg font-bold text-white group-hover:text-cyan-400 transition">India Landslide Risk Map (8.5k Pts)</h3>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              Interactive Leaflet heatmaps, 8,532 ML-predicted susceptibility coordinates, click-to-assess spatial inference, and highway hazard corridors.
+            </p>
+          </div>
+          <span class="text-xs font-mono font-bold text-cyan-400 flex items-center gap-1">Open GIS Risk Map &rarr;</span>
+        </a>
+
+        <!-- Module 2: AI Risk Engine & Physics Simulator -->
+        <a href="ai_risk_engine.html" class="bg-[#0d1322] hover:bg-[#11192e] border border-purple-500/40 hover:border-purple-400 p-6 rounded-2xl transition space-y-4 group shadow-sm flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center border border-purple-500/30 group-hover:scale-110 transition-transform">
+              <span class="material-symbols-outlined">psychology</span>
+            </div>
+            <h3 class="text-lg font-bold text-white group-hover:text-purple-400 transition">AI Risk Engine &amp; Geotechnical Physics</h3>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              Interactive slope/rainfall parameter sliders, real-time Random Forest ML scoring, and infinite-slope Factor of Safety failure simulation.
+            </p>
+          </div>
+          <span class="text-xs font-mono font-bold text-purple-400 flex items-center gap-1">Launch AI Risk Engine &rarr;</span>
+        </a>
+
+        <!-- Module 3: 3D Digital Twin -->
+        <a href="digital_twin.html" class="bg-[#0d1322] hover:bg-[#11192e] border border-dark-border hover:border-cyan-400/60 p-6 rounded-2xl transition space-y-4 group shadow-sm flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center border border-cyan-500/30 group-hover:scale-110 transition-transform">
+              <span class="material-symbols-outlined">3d_rotation</span>
+            </div>
+            <h3 class="text-lg font-bold text-white group-hover:text-cyan-400 transition">3D Terrain Digital Twin</h3>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              MapLibre 3D hillshade topography, InSAR surface displacement vectors, and volumetric debris simulation.
+            </p>
+          </div>
+          <span class="text-xs font-mono font-bold text-cyan-400 flex items-center gap-1">Launch 3D Twin &rarr;</span>
+        </a>
+
+        <!-- Module 4: AI Drone Recon -->
+        <a href="ai_intelligence.html" class="bg-[#0d1322] hover:bg-[#11192e] border border-dark-border hover:border-tactical-gold/60 p-6 rounded-2xl transition space-y-4 group shadow-sm flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-tactical-gold flex items-center justify-center border border-amber-500/30 group-hover:scale-110 transition-transform">
+              <span class="material-symbols-outlined">flight</span>
+            </div>
+            <h3 class="text-lg font-bold text-white group-hover:text-tactical-gold transition">AI Drone Reconnaissance HUD</h3>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              Real-time computer vision bounding boxes, Thermal FLIR infrared heat scanning, and casualty detection in mountain valleys.
+            </p>
+          </div>
+          <span class="text-xs font-mono font-bold text-tactical-gold flex items-center gap-1">Launch HUD &rarr;</span>
+        </a>
+
+        <!-- Module 5: Early Warning -->
+        <a href="early_warning.html" class="bg-[#0d1322] hover:bg-[#11192e] border border-dark-border hover:border-red-400/60 p-6 rounded-2xl transition space-y-4 group shadow-sm flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="w-10 h-10 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center border border-red-500/30 group-hover:scale-110 transition-transform">
+              <span class="material-symbols-outlined">campaign</span>
+            </div>
+            <h3 class="text-lg font-bold text-white group-hover:text-red-400 transition">Early Warning &amp; Evacuation Dispatch</h3>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              Automated multi-channel siren, SMS, WhatsApp broadcasts, CAP alerts, and NDRF relief battalion tasking.
+            </p>
+          </div>
+          <span class="text-xs font-mono font-bold text-red-400 flex items-center gap-1">Launch Early Warning &rarr;</span>
+        </a>
+
+        <!-- Module 6: Citizen Safety Hub -->
+        <a href="citizen_safety.html" class="bg-[#0d1322] hover:bg-[#11192e] border border-dark-border hover:border-emerald-400/60 p-6 rounded-2xl transition space-y-4 group shadow-sm flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30 group-hover:scale-110 transition-transform">
+              <span class="material-symbols-outlined">shield</span>
+            </div>
+            <h3 class="text-lg font-bold text-white group-hover:text-emerald-400 transition">Citizen Safety &amp; Emergency SOS Hub</h3>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              Public emergency distress beacon with GPS routing, nearest safe shelter locator, and offline hill safety guides.
+            </p>
+          </div>
+          <span class="text-xs font-mono font-bold text-emerald-400 flex items-center gap-1">Launch Citizen Hub &rarr;</span>
+        </a>
+
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- ══ 3D WebGL Three.js Simulation Script for Opening Earth & Landslide Intro ══ -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <script>
+    (function() {
+      var canvas = document.getElementById('intro-webgl-canvas');
+      if (!canvas || typeof THREE === 'undefined') return;
+
+      var scene = new THREE.Scene();
+      scene.fog = new THREE.FogExp2(0x070a11, 0.02);
+
+      var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.set(0, 16, 26);
+
+      var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+      // ══ 1. PROCEDURAL 3D EARTH GLOBE ══
+      var earthGroup = new THREE.Group();
+      earthGroup.position.set(12, 14, -8); // Positioned majestically in upper right atmosphere
+
+      // Earth Core Sphere (Deep Ocean Blue with Specular)
+      var earthGeo = new THREE.SphereGeometry(6.5, 48, 48);
+      var earthMat = new THREE.MeshStandardMaterial({
+        color: 0x0a192f,
+        roughness: 0.6,
+        metalness: 0.3,
+        emissive: 0x021329,
+        emissiveIntensity: 0.4
+      });
+      var earthMesh = new THREE.Mesh(earthGeo, earthMat);
+      earthGroup.add(earthMesh);
+
+      // Earth Landmass Wireframe Grid Overlay (Cyan Grid Lines)
+      var earthWireMat = new THREE.MeshBasicMaterial({
+        color: 0x00e5ff,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.35
+      });
+      var earthWireMesh = new THREE.Mesh(earthGeo, earthWireMat);
+      earthWireMesh.scale.set(1.008, 1.008, 1.008);
+      earthGroup.add(earthWireMesh);
+
+      // Earth Glowing Atmospheric Aura
+      var atmosGeo = new THREE.SphereGeometry(7.2, 32, 32);
+      var atmosMat = new THREE.MeshBasicMaterial({
+        color: 0x38bdf8,
+        transparent: true,
+        opacity: 0.12,
+        side: THREE.BackSide
+      });
+      var atmosMesh = new THREE.Mesh(atmosGeo, atmosMat);
+      earthGroup.add(atmosMesh);
+
+      // Hazard Hotspot Pulsing Beacons on India Coordinates
+      var beaconGeo = new THREE.RingGeometry(0.15, 0.45, 16);
+      var beaconMatRed = new THREE.MeshBasicMaterial({
+        color: 0xef4444,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.85
+      });
+      var beaconHimalaya = new THREE.Mesh(beaconGeo, beaconMatRed);
+      beaconHimalaya.position.set(2.8, 4.2, 4.0);
+      beaconHimalaya.lookAt(beaconHimalaya.position.clone().multiplyScalar(2));
+      earthGroup.add(beaconHimalaya);
+
+      var beaconMatGold = new THREE.MeshBasicMaterial({
+        color: 0xf59e0b,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.85
+      });
+      var beaconWayanad = new THREE.Mesh(beaconGeo, beaconMatGold);
+      beaconWayanad.position.set(3.2, 2.0, 4.8);
+      beaconWayanad.lookAt(beaconWayanad.position.clone().multiplyScalar(2));
+      earthGroup.add(beaconWayanad);
+
+      // Orbiting InSAR Radar Satellite & Telemetry Ring
+      var orbitRingGeo = new THREE.RingGeometry(9.2, 9.28, 64);
+      var orbitRingMat = new THREE.MeshBasicMaterial({
+        color: 0x0284c7,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.25
+      });
+      var orbitRing = new THREE.Mesh(orbitRingGeo, orbitRingMat);
+      orbitRing.rotation.x = Math.PI / 3;
+      earthGroup.add(orbitRing);
+
+      // Satellite Body
+      var satGroup = new THREE.Group();
+      var satBody = new THREE.Mesh(
+        new THREE.BoxGeometry(0.5, 0.3, 0.3),
+        new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.9, roughness: 0.2 })
+      );
+      satGroup.add(satBody);
+
+      var panelGeo = new THREE.BoxGeometry(0.9, 0.05, 0.4);
+      var panelMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.8, roughness: 0.3 });
+      var panelL = new THREE.Mesh(panelGeo, panelMat);
+      panelL.position.x = -0.7;
+      satGroup.add(panelL);
+      var panelR = new THREE.Mesh(panelGeo, panelMat);
+      panelR.position.x = 0.7;
+      satGroup.add(panelR);
+
+      satGroup.position.set(6.8, 5.0, 4.2);
+      earthGroup.add(satGroup);
+
+      scene.add(earthGroup);
+
+
+      // ══ 2. PROCEDURAL MOUNTAIN SLOPE TERRAIN ══
+      var terrainWidth = 56;
+      var terrainDepth = 56;
+      var segments = 100;
+      var geometry = new THREE.PlaneGeometry(terrainWidth, terrainDepth, segments, segments);
+      geometry.rotateX(-Math.PI / 2);
+
+      var pos = geometry.attributes.position;
+      for (var i = 0; i < pos.count; i++) {
+        var x = pos.getX(i);
+        var z = pos.getZ(i);
+        
+        var elevation = Math.sin(x * 0.12) * Math.cos(z * 0.12) * 4.2;
+        elevation += Math.sin(x * 0.35 + z * 0.28) * 2.2;
+        elevation += Math.cos(x * 0.7 - z * 0.5) * 0.8;
+        
+        if (x > -10 && x < 10 && z > -8 && z < 12) {
+          elevation -= 2.6 * Math.exp(-(x * x + z * z) / 28);
+        }
+        pos.setY(i, elevation);
+      }
+      geometry.computeVertexNormals();
+
+      // Shaded terrain base
+      var terrainMaterial = new THREE.MeshStandardMaterial({
+        color: 0x0f172a,
+        roughness: 0.8,
+        metalness: 0.25,
+        flatShading: true
+      });
+      var terrainMesh = new THREE.Mesh(geometry, terrainMaterial);
+      terrainMesh.position.y = -2;
+      scene.add(terrainMesh);
+
+      // Topographic Contour Wireframe
+      var wireframeMaterial = new THREE.MeshBasicMaterial({
+        color: 0x00e5ff,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.28
+      });
+      var wireframeMesh = new THREE.Mesh(geometry, wireframeMaterial);
+      wireframeMesh.position.y = -1.97;
+      scene.add(wireframeMesh);
+
+      // Failure Scarp Zone (Red)
+      var scarGeometry = new THREE.CylinderGeometry(3.2, 5.8, 0.15, 36);
+      var scarMaterial = new THREE.MeshBasicMaterial({
+        color: 0xef4444,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.6
+      });
+      var scarMesh = new THREE.Mesh(scarGeometry, scarMaterial);
+      scarMesh.position.set(0, -2.4, 2);
+      scene.add(scarMesh);
+
+      // Sliding Debris Cone
+      var debrisGeometry = new THREE.ConeGeometry(3.5, 2.2, 16);
+      debrisGeometry.rotateX(Math.PI);
+      var debrisMaterial = new THREE.MeshStandardMaterial({
+        color: 0xb91c1c,
+        roughness: 0.9,
+        metalness: 0.1,
+        transparent: true,
+        opacity: 0.75
+      });
+      var debrisMesh = new THREE.Mesh(debrisGeometry, debrisMaterial);
+      debrisMesh.position.set(0, -1.2, 2);
+      debrisMesh.scale.set(1, 0.5, 1.4);
+      scene.add(debrisMesh);
+
+      // Rain Particles System
+      var rainCount = 1000;
+      var rainGeo = new THREE.BufferGeometry();
+      var rainPositions = new Float32Array(rainCount * 3);
+      for (var r = 0; r < rainCount; r++) {
+        rainPositions[r * 3] = (Math.random() - 0.5) * 45;
+        rainPositions[r * 3 + 1] = Math.random() * 25 + 5;
+        rainPositions[r * 3 + 2] = (Math.random() - 0.5) * 45;
+      }
+      rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPositions, 3));
+      var rainMaterial = new THREE.PointsMaterial({
+        color: 0x38bdf8,
+        size: 0.14,
+        transparent: true,
+        opacity: 0.0
+      });
+      var rainParticles = new THREE.Points(rainGeo, rainMaterial);
+      scene.add(rainParticles);
+
+      // Scene Lighting
+      var ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+      scene.add(ambientLight);
+      var dirLight1 = new THREE.DirectionalLight(0x00e5ff, 2.6);
+      dirLight1.position.set(14, 26, 14);
+      scene.add(dirLight1);
+      var dirLight2 = new THREE.DirectionalLight(0xf59e0b, 1.4);
+      dirLight2.position.set(-16, 18, -10);
+      scene.add(dirLight2);
+
+      // Interactive State
+      var isRainActive = false;
+      var isSaturated = false;
+      var isSlipTriggered = false;
+      var autoRotate = true;
+      var satAngle = 0;
+
+      window.toggleIntroRain = function() {
+        isRainActive = !isRainActive;
+        var btn = document.getElementById('intro-btn-rain');
+        var val = document.getElementById('intro-rain-val');
+        if (isRainActive) {
+          rainMaterial.opacity = 0.8;
+          if (btn) btn.className = 'px-3 py-1 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-400 flex items-center gap-1 transition';
+          if (val) val.textContent = 'Rainfall: 145 mm/h (CRITICAL)';
+        } else {
+          rainMaterial.opacity = 0.0;
+          if (btn) btn.className = 'px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1 transition';
+          if (val) val.textContent = 'Rainfall: 0 mm/h';
+        }
+      };
+
+      window.toggleIntroSaturation = function() {
+        isSaturated = !isSaturated;
+        var btn = document.getElementById('intro-btn-sat');
+        var badge = document.getElementById('intro-fs-badge');
+        if (isSaturated) {
+          terrainMaterial.color.setHex(0x064e3b);
+          wireframeMaterial.color.setHex(0x34d399);
+          if (btn) btn.className = 'px-3 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-400 flex items-center gap-1 transition';
+          if (badge) {
+            badge.textContent = 'Fs = 0.88 (SLOPE FAILURE)';
+            badge.className = 'text-xs font-mono font-black text-red-400 bg-red-500/10 border border-red-500/30 px-3 py-1 rounded-md animate-pulse';
+          }
+        } else {
+          terrainMaterial.color.setHex(0x0f172a);
+          wireframeMaterial.color.setHex(0x00e5ff);
+          if (btn) btn.className = 'px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1 transition';
+          if (badge) {
+            badge.textContent = 'Fs = 1.42 (STABLE)';
+            badge.className = 'text-xs font-mono font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-md';
+          }
+        }
+      };
+
+      window.triggerIntroSlopeSlip = function() {
+        isSlipTriggered = !isSlipTriggered;
+        var btn = document.getElementById('intro-btn-slip');
+        if (isSlipTriggered) {
+          if (btn) btn.className = 'px-3 py-1 rounded-lg bg-red-600 text-white font-bold border border-red-500 flex items-center gap-1 transition shadow-lg shadow-red-500/30';
+          if (typeof gsap !== 'undefined') {
+            gsap.to(debrisMesh.position, { x: 1.5, y: -3.8, z: 8.5, duration: 2.2, ease: 'power3.in' });
+          }
+        } else {
+          if (btn) btn.className = 'px-3 py-1 rounded-lg bg-red-950/50 hover:bg-red-900/60 text-red-300 border border-red-500/40 flex items-center gap-1 transition';
+          if (typeof gsap !== 'undefined') {
+            gsap.to(debrisMesh.position, { x: 0, y: -1.2, z: 2, duration: 1.2, ease: 'power2.out' });
+          }
+        }
+      };
+
+      window.setIntroCameraView = function(view) {
+        if (typeof gsap === 'undefined') return;
+        autoRotate = false;
+        
+        // Mode Buttons Highlight
+        var btnEarth = document.getElementById('intro-btn-earth');
+        var btnTerrain = document.getElementById('intro-btn-terrain');
+        var btnSat = document.getElementById('intro-btn-satview');
+
+        if (btnEarth) btnEarth.className = 'px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1 transition';
+        if (btnTerrain) btnTerrain.className = 'px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1 transition';
+        if (btnSat) btnSat.className = 'px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1 transition';
+
+        if (view === 'earth') {
+          if (btnEarth) btnEarth.className = 'px-3 py-1 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-400 flex items-center gap-1 transition shadow-sm';
+          gsap.to(camera.position, { x: 10, y: 15, z: 8, duration: 1.8, ease: 'power2.out' });
+          gsap.to(camera.rotation, { x: -0.1, y: 0.45, z: 0.05, duration: 1.8 });
+        } else if (view === 'satellite') {
+          if (btnSat) btnSat.className = 'px-3 py-1 rounded-lg bg-sky-500/20 text-sky-300 border border-sky-400 flex items-center gap-1 transition shadow-sm';
+          gsap.to(camera.position, { x: 18, y: 20, z: 12, duration: 1.8, ease: 'power2.out' });
+          gsap.to(camera.rotation, { x: -0.4, y: 0.8, z: 0.2, duration: 1.8 });
+        } else if (view === 'scarp') {
+          gsap.to(camera.position, { x: 3, y: 2.5, z: 7, duration: 1.5, ease: 'power2.out' });
+          gsap.to(camera.rotation, { x: -0.1, y: 0.4, z: 0.05, duration: 1.5 });
+        } else {
+          if (btnTerrain) btnTerrain.className = 'px-3 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-400 flex items-center gap-1 transition shadow-sm';
+          gsap.to(camera.position, { x: 0, y: 16, z: 26, duration: 1.8, ease: 'power2.out' });
+          gsap.to(camera.rotation, { x: -0.3, y: 0, z: 0, duration: 1.8 });
+          autoRotate = true;
+        }
+      };
+
+      function renderLoop() {
+        requestAnimationFrame(renderLoop);
+        
+        // 3D Earth Globe Slow Rotation & Pulse
+        earthGroup.rotation.y += 0.0015;
+        
+        // InSAR Satellite Orbit motion
+        satAngle += 0.015;
+        satGroup.position.x = Math.cos(satAngle) * 9.2;
+        satGroup.position.z = Math.sin(satAngle) * 9.2;
+        satGroup.rotation.y = -satAngle;
+
+        // Ambient Mountain Rotation
+        if (autoRotate) {
+          terrainMesh.rotation.y += 0.0003;
+          wireframeMesh.rotation.y += 0.0003;
+          scarMesh.rotation.y += 0.0003;
+          debrisMesh.rotation.y += 0.0003;
+        }
+
+        // Rain simulation
+        if (isRainActive) {
+          var p = rainGeo.attributes.position;
+          for (var i = 0; i < rainCount; i++) {
+            var y = p.getY(i) - 0.7;
+            if (y < -2) y = 25;
+            p.setY(i, y);
+          }
+          p.needsUpdate = true;
+        }
+
+        renderer.render(scene, camera);
+      }
+      renderLoop();
+
+      window.addEventListener('resize', function() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+    })();
+  </script>
+
+  <!-- Interactive Slope Simulator Script for Section 2 -->
+  <script>
+    function updateHomeSim() {
+      var slope = parseFloat(document.getElementById('home-input-slope').value);
+      var rain = parseFloat(document.getElementById('home-input-rain').value);
+      
+      document.getElementById('home-val-slope').textContent = slope + '°';
+      document.getElementById('home-val-rain').textContent = rain + ' mm';
+      document.getElementById('home-canvas-angle').textContent = slope + '°';
+
+      var betaRad = slope * Math.PI / 180;
+      var phiRad = 34 * Math.PI / 180;
+      var c = 12;
+      var gamma = 19;
+      var z = 2.5;
+      var gammaW = 9.81;
+
+      var hwRatio = Math.min(1.0, rain / 180);
+      var u = hwRatio * gammaW * z;
+      var effStress = (gamma * z - u) * Math.cos(betaRad) * Math.cos(betaRad);
+      if (effStress < 5) effStress = 5;
+
+      var resisting = c + effStress * Math.tan(phiRad);
+      var driving = gamma * z * Math.sin(betaRad) * Math.cos(betaRad);
+      var fs = resisting / driving;
+
+      document.getElementById('home-val-stress').textContent = effStress.toFixed(1) + ' kPa';
+      document.getElementById('home-val-pore').textContent = u.toFixed(1) + ' kPa';
+      
+      var fsEl = document.getElementById('home-val-fs');
+      var statusEl = document.getElementById('home-sim-status');
+      
+      fsEl.textContent = fs.toFixed(2);
+
+      if (fs > 1.3) {
+        fsEl.className = 'text-emerald-400 font-bold text-sm';
+        statusEl.className = 'text-xs font-mono font-black px-2.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/40';
+        statusEl.textContent = 'STABLE (Fs = ' + fs.toFixed(2) + ')';
+      } else if (fs >= 1.0) {
+        fsEl.className = 'text-amber-400 font-bold text-sm';
+        statusEl.className = 'text-xs font-mono font-black px-2.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/40';
+        statusEl.textContent = 'MARGINAL / CRITICAL (Fs = ' + fs.toFixed(2) + ')';
+      } else {
+        fsEl.className = 'text-red-400 font-bold text-sm';
+        statusEl.className = 'text-xs font-mono font-black px-2.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/40 animate-pulse';
+        statusEl.textContent = 'CATASTROPHIC FAILURE (Fs = ' + fs.toFixed(2) + ')';
+      }
+
+      drawSlopeCanvas(slope, rain, fs);
+    }
+
+    function drawSlopeCanvas(slope, rain, fs) {
+      var canvas = document.getElementById('home-slope-canvas');
+      if (!canvas) return;
+      var ctx = canvas.getContext('2d');
+      var w = canvas.width = canvas.offsetWidth;
+      var h = canvas.height = canvas.offsetHeight;
+
+      ctx.clearRect(0, 0, w, h);
+
+      var skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+      skyGrad.addColorStop(0, '#05080e');
+      skyGrad.addColorStop(1, '#090e1a');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, w, h);
+
+      if (rain > 10) {
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+        ctx.lineWidth = 1;
+        var dropCount = Math.floor(rain / 3);
+        for (var i = 0; i < dropCount; i++) {
+          var rx = Math.random() * w;
+          var ry = Math.random() * (h * 0.7);
+          ctx.beginPath();
+          ctx.moveTo(rx, ry);
+          ctx.lineTo(rx - 3, ry + 10);
+          ctx.stroke();
+        }
+      }
+
+      var slopeHeight = h * 0.2 + (slope / 55) * (h * 0.45);
+      var x1 = 20, y1 = h - slopeHeight;
+      var x2 = w - 30, y2 = h - 20;
+
+      ctx.beginPath();
+      ctx.moveTo(0, h);
+      ctx.lineTo(0, y1 - 10);
+      ctx.lineTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.lineTo(w, y2 + 10);
+      ctx.lineTo(w, h);
+      ctx.closePath();
+
+      var rockGrad = ctx.createLinearGradient(0, y1, 0, h);
+      rockGrad.addColorStop(0, '#1e293b');
+      rockGrad.addColorStop(1, '#0f172a');
+      ctx.fillStyle = rockGrad;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0, 229, 255, 0.4)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      if (rain > 20) {
+        ctx.beginPath();
+        ctx.moveTo(x1, y1 + 15);
+        ctx.lineTo(x2, y2 + 15);
+        ctx.lineTo(x2, h - 5);
+        ctx.lineTo(x1, h - 5);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(2, 132, 199, 0.25)';
+        ctx.fill();
+      }
+
+      ctx.beginPath();
+      ctx.moveTo(x1 + 30, y1 + 5);
+      ctx.quadraticCurveTo((x1 + x2) / 2, y1 + (y2 - y1) * 0.85, x2 - 20, y2);
+      ctx.lineWidth = fs < 1.0 ? 3 : 1.5;
+      ctx.strokeStyle = fs < 1.0 ? '#ef4444' : (fs < 1.3 ? '#f59e0b' : 'rgba(0, 229, 255, 0.5)');
+      if (fs < 1.0) {
+        ctx.setLineDash([5, 3]);
+      } else {
+        ctx.setLineDash([]);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    window.addEventListener('load', function() {
+      setTimeout(updateHomeSim, 100);
+    });
+    window.addEventListener('resize', updateHomeSim);
+  </script>
+
+  <!-- Central API Client & SOS Emergency Handler -->
+  <script src="assets/js/api_client.js?v=4"></script>
+  <script src="assets/js/sos_handler.js"></script>
+</body>
+</html>

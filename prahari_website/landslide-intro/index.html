@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PRITHVI-SHIELD — 3D Landslide Geodynamics & Trigger Mechanics (SIH 2026)</title>
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css" />
+  
+  <!-- Google Fonts & Material Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+  <!-- Real-Time Emergency Alerts & Universal Slide-Bar Drawer -->
+  <script src="../assets/js/live_emergency_alerts.js"></script>
+  <script src="../assets/js/nav_sidebar.js"></script>
+</head>
+<body>
+
+  <!-- 3D WebGL Background Canvas -->
+  <canvas id="webgl-canvas"></canvas>
+
+  <!-- Global Header Navigation Bar -->
+  <header class="navbar">
+    <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+      <button onclick="window.prahariToggleSidebar ? window.prahariToggleSidebar() : window.location.href='../index.html'" class="prahari-slidebar-toggle-btn" title="Open Command Slide-Bar (Ctrl+B)" style="background: rgba(13, 21, 38, 0.9); border: 1px solid rgba(0, 229, 255, 0.3); color: #00e5ff; padding: 6px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; letter-spacing: 0.5px;">
+        <span class="material-symbols-outlined" style="font-size: 14px;">menu</span>
+        <span>MENU</span>
+      </button>
+
+      <a href="../index.html" class="brand-wrapper">
+        <img src="../assets/logo.jpg" alt="PRITHVI-SHIELD Logo" class="brand-logo" onerror="this.src='../assets/logo.jpg'" />
+        <div>
+          <div class="logo-text">PRITHVI-SHIELD <span>Command</span></div>
+          <span class="logo-sub">SIH 2026 &bull; Geodynamics</span>
+        </div>
+      </a>
+    </div>
+
+    <nav class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="index.html" class="active">3D Intro</a>
+      <a href="../dashboard.html">Dashboard</a>
+      <a href="../gis_map.html">GIS Maps</a>
+      <a href="../ai_risk_engine.html">AI Risk Engine</a>
+      <a href="../digital_twin.html">3D Digital Twin</a>
+      <a href="../alert_center.html" style="color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);">🚨 Alert Center</a>
+      <a href="../evacuation_rescue.html" style="color: #fbbf24;">🏃 Evacuation</a>
+      <a href="../citizen_safety.html">Citizen Safety</a>
+    </nav>
+
+    <div class="nav-actions">
+      <a href="../dashboard.html" class="btn-nav-action">
+        <span class="material-symbols-outlined" style="font-size: 14px;">dashboard</span> Hub
+      </a>
+      <a href="../alert_center.html" class="btn-sos">
+        <span>🚨</span> EMERGENCY
+      </a>
+    </div>
+  </header>
+
+  <!-- Floating 3D Geomechanics Control HUD -->
+  <div class="terrain-hud-controls">
+    <div class="hud-item">
+      <span class="hud-label">Monsoon Rainfall:</span>
+      <span id="hud-status-rain" class="hud-value-badge">Normal (0 mm/h)</span>
+    </div>
+    
+    <div class="hud-item">
+      <span class="hud-label">Factor of Safety (FoS):</span>
+      <span id="hud-status-fs" class="hud-value-badge">1.42 (STABLE)</span>
+    </div>
+
+    <div class="hud-btn-group">
+      <button id="hud-btn-rain" class="hud-btn" onclick="toggleRainSimulation()">
+        <span class="material-symbols-outlined" style="font-size: 14px;">rainy</span> Rain Simulator
+      </button>
+      <button id="hud-btn-sat" class="hud-btn" onclick="toggleSaturation()">
+        <span class="material-symbols-outlined" style="font-size: 14px;">water_drop</span> Pore Saturation
+      </button>
+      <button id="hud-btn-slip" class="hud-btn hud-btn-trigger" onclick="triggerSlopeSlip()">
+        <span class="material-symbols-outlined" style="font-size: 14px;">landslide</span> Trigger Slip Failure
+      </button>
+    </div>
+
+    <div class="hud-btn-group">
+      <button class="hud-btn" onclick="setCameraView('earth')" title="Focus 3D Earth Globe">
+        🌍 3D Earth
+      </button>
+      <button class="hud-btn" onclick="setCameraView('scarp')" title="Inspect Rupture Scar">
+        🔍 Slip Scarp
+      </button>
+      <button class="hud-btn" onclick="setCameraView('overhead')" title="Topographic Birds-Eye View">
+        🌐 Overhead
+      </button>
+      <button class="hud-btn" onclick="setCameraView('default')" title="Reset Orbit">
+        ↺ Reset
+      </button>
+    </div>
+
+    <button class="hud-btn-close" onclick="toggleHudVisibility()" title="Remove/Hide Controls (Clean View)">
+      ✕
+    </button>
+  </div>
+
+  <!-- Reopen HUD Trigger Pill (Visible when HUD is hidden) -->
+  <button id="hud-reopen-btn" class="hud-reopen-pill hidden" onclick="toggleHudVisibility()" title="Show 3D Geomechanics Controls">
+    <span class="material-symbols-outlined" style="font-size: 14px;">tune</span> 3D Controls
+  </button>
+
+  <!-- Scrollable Interactive Narrative Sections -->
+  <main class="content-container">
+
+    <!-- Section 1: Hero Overview -->
+    <section class="screen" id="hero">
+      <div class="hero-content">
+        <span class="sub-badge">
+          <span class="material-symbols-outlined" style="font-size: 13px;">public</span>
+          GEOMORPHOLOGY &bull; SIH 2026 DISASTER PLATFORM
+        </span>
+        <h1 class="main-title">
+          LANDSLIDE <br/>
+          <span class="gradient-text">GEODYNAMICS &amp; AI</span>
+        </h1>
+        <p class="hero-desc">
+          Understand the geotechnical forces triggering mass wasting across India's high-risk mountainous belts. 
+          PRITHVI-SHIELD fuses 3D digital elevation models, infinite-slope shear physics, and spatially-validated Random Forest machine learning to forecast slope ruptures before they occur.
+        </p>
+
+        <div class="hero-actions">
+          <button class="btn-primary" onclick="scrollToSection('mechanics')">
+            <span class="material-symbols-outlined" style="font-size: 18px;">analytics</span> EXPLORE SLOPE PHYSICS
+          </button>
+          <a href="../gis_map.html" class="btn-secondary">
+            <span class="material-symbols-outlined" style="font-size: 18px;">map</span> OPEN 8,532 NODE MAP
+          </a>
+        </div>
+
+        <div class="hero-stat-ribbon">
+          <div class="hero-stat-box">
+            <span class="val">8,532</span>
+            <span class="lbl">Monitored Points</span>
+          </div>
+          <div class="hero-stat-box">
+            <span class="val">0.8524</span>
+            <span class="lbl">Spatial ROC-AUC</span>
+          </div>
+          <div class="hero-stat-box">
+            <span class="val">1.48M</span>
+            <span class="lbl">Protected Citizens</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: Geotechnical Slope Stability Physics -->
+    <section class="screen split-screen" id="mechanics">
+      <div class="panel-left">
+        <span class="sub-badge sub-badge-alert">
+          <span class="material-symbols-outlined" style="font-size: 13px;">warning</span>
+          SHEAR FAILURE &amp; PORE PRESSURE
+        </span>
+        <h2 class="section-title">THE UNSTABLE EARTH</h2>
+        <p class="body-text">
+          Slope rupture occurs when gravitational driving shear stress exceeds the internal shear resistance of soil and weathered bedrock strata. Saturated mountain aquifers build hydrostatic pore pressure, reducing effective stress and triggering catastrophic landslides within minutes.
+        </p>
+
+        <!-- Mohr-Coulomb Formula Box -->
+        <div class="formula-card">
+          <div class="formula-title">Mohr-Coulomb Failure Criterion</div>
+          <div class="formula-math">τ = c' + (σ<sub>n</sub> - u) · tan(φ')</div>
+          <div class="formula-note">
+            Where <strong>c'</strong> is effective soil cohesion, <strong>(σ<sub>n</sub> - u)</strong> is effective normal stress, <strong>u</strong> is pore-water pressure, and <strong>φ'</strong> is the internal friction angle.
+          </div>
+        </div>
+
+        <div class="formula-card" style="border-left-color: var(--accent-salmon);">
+          <div class="formula-title">Factor of Safety (FoS) Stability Metric</div>
+          <div class="formula-math">FoS = Resisting Shear Strength / Driving Shear Stress</div>
+          <div class="formula-note">
+            <strong>FoS &gt; 1.3</strong>: Stable &bull; <strong>1.0 &le; FoS &le; 1.3</strong>: Critical Margin &bull; <strong>FoS &lt; 1.0</strong>: Immediate Rupture / Slide.
+          </div>
+        </div>
+
+        <div class="hero-actions">
+          <button class="btn-primary" onclick="toggleSaturation()">
+            <span class="material-symbols-outlined" style="font-size: 18px;">water_drop</span> SIMULATE PORE SATURATION
+          </button>
+          <button class="btn-secondary" onclick="scrollToSection('types')">
+            CLASSIFICATIONS &rarr;
+          </button>
+        </div>
+      </div>
+
+      <div class="panel-right">
+        <!-- Visual 3D alignment zone for Three.js WebGL terrain -->
+      </div>
+    </section>
+
+    <!-- Section 3: Indian Classifications & Hotspots -->
+    <section class="screen focus-screen" id="types">
+      <div class="glass-card">
+        <span class="sub-badge sub-badge-danger">
+          <span class="material-symbols-outlined" style="font-size: 13px;">crisis_alert</span>
+          INDIA HAZARD CLASSIFICATION
+        </span>
+        <h3>TERRAIN FAILURE MODES</h3>
+        <p>
+          Himalayan and Western Ghats geological formations exhibit diverse landslide mechanics influenced by tectonic thrusts, monsoonal saturation, and steep slope gradients.
+        </p>
+
+        <div class="zone-chips">
+          <span class="zone-chip danger">Wayanad Debris Flow (2024)</span>
+          <span class="zone-chip danger">Joshimath Subsidence &amp; Slump</span>
+          <span class="zone-chip warning">Kedarnath-Rudraprayag Corridor</span>
+          <span class="zone-chip warning">Nilgiris Escarpment (Tamil Nadu)</span>
+          <span class="zone-chip">Sikkim-Darjeeling Thrust Belt</span>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat-item">
+            <span class="stat-val red">&gt; 35°</span>
+            <span class="stat-lbl">Critical Rupture Slope</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-val gold">&gt; 120 mm/24h</span>
+            <span class="stat-lbl">Rainfall Threshold</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-val">45,000 m³</span>
+            <span class="lbl">Average Debris Volume</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-val">&gt; 65 km/h</span>
+            <span class="lbl">Surge Flow Velocity</span>
+          </div>
+        </div>
+
+        <div class="hero-actions" style="margin-top: 24px;">
+          <a href="../ai_risk_engine.html" class="btn-primary">
+            <span class="material-symbols-outlined" style="font-size: 18px;">psychology</span> LAUNCH AI RISK ENGINE
+          </a>
+          <button class="btn-secondary" onclick="scrollToSection('matrix')">
+            MONITORING MATRIX &rarr;
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 4: Multi-Hazard AI Monitoring Matrix -->
+    <section class="screen center-screen" id="matrix">
+      <div class="matrix-card">
+        <span class="sub-badge">
+          <span class="material-symbols-outlined" style="font-size: 13px;">hub</span>
+          MULTI-TIERED DISASTER RESPONSE
+        </span>
+        <h2 class="section-title">PRITHVI-SHIELD AI INTELLIGENCE MATRIX</h2>
+        <p class="body-text" style="max-width: 680px; margin: 0 auto 20px auto;">
+          An end-to-end national early warning pipeline integrating satellite remote sensing, geotechnical telemetry, AI prediction, and automated citizen evacuation dispatches.
+        </p>
+
+        <div class="matrix-grid">
+          <div class="matrix-tile">
+            <div class="matrix-tile-icon">🛰️</div>
+            <div class="matrix-tile-title">InSAR Satellite Telemetry</div>
+            <div class="matrix-tile-desc">Millimeter-level surface ground displacement detection and slope creep monitoring from Sentinel-1 radar.</div>
+          </div>
+
+          <div class="matrix-tile">
+            <div class="matrix-tile-icon">🧠</div>
+            <div class="matrix-tile-title">Spatial ML Classifier</div>
+            <div class="matrix-tile-desc">Ensemble Random Forest &amp; XGBoost engine trained on 8,532 Indian landslide event coordinates (0.8524 ROC-AUC).</div>
+          </div>
+
+          <div class="matrix-tile">
+            <div class="matrix-tile-icon">📡</div>
+            <div class="matrix-tile-title">Early Warning Sirens</div>
+            <div class="matrix-tile-desc">Automated CAP protocol alerts, SMS broadcast, and NDRF relief battalion tasking under 30 seconds.</div>
+          </div>
+
+          <div class="matrix-tile">
+            <div class="matrix-tile-icon">🛡️</div>
+            <div class="matrix-tile-title">Citizen Safety Beacon</div>
+            <div class="matrix-tile-desc">Live SOS distress beacon with offline evacuation shelter routing and AI multilingual voice assistant.</div>
+          </div>
+        </div>
+
+        <div class="hero-actions" style="justify-content: center;">
+          <a href="../gis_map.html" class="btn-primary">
+            <span class="material-symbols-outlined" style="font-size: 18px;">map</span> EXPLORE LIVE GIS MAP
+          </a>
+          <a href="../digital_twin.html" class="btn-secondary">
+            <span class="material-symbols-outlined" style="font-size: 18px;">3d_rotation</span> VIEW 3D DIGITAL TWIN
+          </a>
+          <a href="../index.html" class="btn-secondary">
+            <span class="material-symbols-outlined" style="font-size: 18px;">home</span> RETURN TO HOME
+          </a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- CDN Dependencies: Three.js & GSAP -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

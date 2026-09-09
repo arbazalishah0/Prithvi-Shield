@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html class="h-full dark" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>Admin Ops & Security Gate — PRITHVI-SHIELD Command</title>
+  
+  <!-- Google Fonts & Material Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "dark-bg": "#090d16",
+            "dark-surface": "#0d1322",
+            "dark-panel": "#111827",
+            "dark-card": "#0f172a",
+            "dark-border": "#1e293b",
+            "dark-border-light": "#334155",
+            "tactical-gold": "#f59e0b",
+            "tactical-gold-hover": "#fbbf24",
+            "tactical-cyan": "#00e5ff",
+            "tactical-cyan-dark": "#0284c7",
+            "tactical-salmon": "#f87171",
+            "tactical-salmon-dark": "#ef4444",
+            "tactical-pink": "#fb7185",
+            "primary": "#000a1e",
+            "primary-container": "#002147",
+            "secondary": "#b6171e",
+            "secondary-container": "#da3433"
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+  </style>
+  <!-- Real-Time Emergency Alerts & Universal Slide-Bar Drawer -->
+  <script src="assets/js/live_emergency_alerts.js"></script>
+  <script src="assets/js/nav_sidebar.js"></script>
+</head>
+
+<body class="bg-dark-bg text-slate-100 min-h-screen flex flex-col font-sans select-none">
+
+  <!-- ══ TOP GLOBAL NAVIGATION BAR ══ -->
+  <nav class="fixed top-0 w-full z-50 h-14 bg-[#090d16]/95 backdrop-blur-md border-b border-dark-border px-4 sm:px-8 flex items-center justify-between shadow-md">
+    <div class="flex items-center gap-6">
+      <a href="index.html" class="flex items-center gap-2.5 group">
+        <img src="assets/logo.jpg" alt="PRITHVI-SHIELD Logo" class="w-10 h-10 object-contain group-hover:scale-105 transition-transform" />
+        <div class="flex flex-col">
+          <span class="font-extrabold text-sm tracking-tight text-white flex items-center gap-1.5">
+            PRITHVI-SHIELD <span class="text-cyan-400 font-bold">Command</span>
+          </span>
+        </div>
+      </a>
+
+      <!-- Main Navigation Links -->
+      <div class="hidden md:flex items-center gap-1 text-xs font-semibold text-slate-300">
+        <a class="hover:text-white hover:bg-slate-800/60 transition px-2.5 py-1.5 rounded" href="index.html">Home</a>
+        <a class="hover:text-white hover:bg-slate-800/60 transition px-2.5 py-1.5 rounded" href="dashboard.html">Dashboard</a>
+        <a class="hover:text-white hover:bg-slate-800/60 transition px-2.5 py-1.5 rounded" href="gis_map.html">GIS Maps</a>
+        <a class="hover:text-white hover:bg-slate-800/60 transition px-2.5 py-1.5 rounded" href="ai_risk_engine.html">AI Risk Engine</a>
+        <a class="hover:text-white hover:bg-slate-800/60 transition px-2.5 py-1.5 rounded" href="digital_twin.html">3D Digital Twin</a>
+        <a class="hover:text-tactical-gold hover:bg-slate-800/60 transition px-2.5 py-1.5 rounded" href="ai_intelligence.html">AI Recon</a>
+        <a class="hover:text-white hover:bg-slate-800/60 transition px-2.5 py-1.5 rounded" href="early_warning.html">Early Warning</a>
+        <a class="hover:text-emerald-400 hover:bg-slate-800/60 transition px-2.5 py-1.5 rounded" href="citizen_safety.html">Citizen Safety</a>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <a href="admin_login.html" class="bg-cyan-950 text-cyan-300 border border-cyan-500/40 font-bold text-xs px-3.5 py-1.5 rounded flex items-center gap-1.5 uppercase tracking-wider transition shadow-sm">
+        <span class="material-symbols-outlined text-sm">lock</span> Admin Portal
+      </a>
+    </div>
+  </nav>
+
+  <!-- ══ LOGIN CANVAS ══ -->
+  <main class="flex-grow pt-20 flex items-center justify-center p-4">
+    <div class="max-w-md w-full bg-[#0d1322] border border-dark-border rounded-2xl shadow-2xl p-8 space-y-6">
+      
+      <div class="text-center space-y-2">
+        <div class="w-14 h-14 bg-gradient-to-br from-cyan-500 to-blue-700 text-white rounded-2xl mx-auto flex items-center justify-center text-2xl shadow-lg shadow-cyan-500/20">
+          🛡️
+        </div>
+        <h1 class="text-2xl font-black text-white">Authority Authentication</h1>
+        <p class="text-xs text-slate-400 font-mono">Disaster Management Command &amp; Control Access</p>
+      </div>
+
+      <div class="bg-[#070a12] border border-dark-border p-3 rounded-lg flex items-center gap-2 text-xs text-slate-300 font-mono">
+        <span class="material-symbols-outlined text-cyan-400 text-sm">security</span>
+        <span>MDoNER &amp; NDMA Institutional Security Gate</span>
+      </div>
+
+      <form onsubmit="handleLogin(event)" class="space-y-4 text-xs">
+        <div>
+          <label class="block font-bold text-slate-300 mb-1">Official Government ID / Email</label>
+          <input
+            type="text"
+            id="officerId"
+            value="admin.officer@sih.gov.in"
+            required
+            class="w-full bg-[#070a12] border border-slate-700 rounded-lg p-2.5 text-xs text-white font-mono focus:ring-1 focus:ring-cyan-400 outline-none"
+          />
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-300 mb-1">Password / Secure Key</label>
+          <input
+            type="password"
+            value="••••••••••••"
+            required
+            class="w-full bg-[#070a12] border border-slate-700 rounded-lg p-2.5 text-xs text-white font-mono focus:ring-1 focus:ring-cyan-400 outline-none"
+          />
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-300 mb-1">Assigned Command Sector</label>
+          <select class="w-full bg-[#070a12] border border-slate-700 rounded-lg p-2.5 text-xs text-cyan-300 font-mono font-bold outline-none">
+            <option>Sector 4: Cascade Range (NE-India HQ)</option>
+            <option>East Sikkim Emergency Operation Center (EOC)</option>
+            <option>Assam State Disaster Authority (ASDMA)</option>
+            <option>Meghalaya Geological Monitoring Division</option>
+          </select>
+        </div>
+
+        <div class="flex items-center justify-between pt-1">
+          <label class="flex items-center gap-2 cursor-pointer text-slate-400">
+            <input type="checkbox" checked class="rounded bg-slate-800 border-slate-700 text-cyan-400 focus:ring-0" />
+            <span>Remember terminal</span>
+          </label>
+          <a href="#" class="text-cyan-400 font-bold hover:underline">Forgot key?</a>
+        </div>
+
+        <button type="submit" class="w-full bg-tactical-cyan hover:bg-cyan-300 text-slate-950 font-black text-xs py-3 rounded-lg shadow-lg shadow-cyan-500/20 transition flex items-center justify-center gap-2 uppercase tracking-wider">
+          <span class="material-symbols-outlined text-sm">login</span> Authenticate &amp; Enter Command Center
+        </button>
+      </form>
+
+      <div class="pt-4 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-500 font-mono">
+        <span>Restricted Access &bull; Level 4</span>
+        <span>IP: SECURE-VPN-04</span>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    function handleLogin(e) {
+      e.preventDefault();
+      window.location.href = "ai_intelligence.html";
+    }
+  </script>
+
+</body>
+</html>

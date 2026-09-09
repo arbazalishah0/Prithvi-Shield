@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html class="h-full dark" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>Sector 4 AI Reconnaissance HUD — PRITHVI-SHIELD Command</title>
+  
+  <!-- Google Fonts & Material Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <!-- Real-Time Emergency Alerts & Universal Slide-Bar Drawer -->
+  <script src="assets/js/live_emergency_alerts.js"></script>
+  <script src="assets/js/nav_sidebar.js"></script>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "dark-bg": "#090d16",
+            "dark-surface": "#0d1322",
+            "dark-panel": "#111827",
+            "dark-card": "#0f172a",
+            "dark-border": "#1e293b",
+            "dark-border-light": "#334155",
+            "tactical-gold": "#f59e0b",
+            "tactical-gold-hover": "#fbbf24",
+            "tactical-cyan": "#00e5ff",
+            "tactical-cyan-dark": "#0284c7",
+            "tactical-salmon": "#f87171",
+            "tactical-salmon-dark": "#ef4444",
+            "tactical-pink": "#fb7185",
+            "primary": "#000a1e",
+            "primary-container": "#002147",
+            "secondary": "#b6171e",
+            "secondary-container": "#da3433"
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    
+    /* Tactical grid overlay */
+    .recon-grid {
+      background-size: 80px 80px;
+      background-image: 
+        linear-gradient(to right, rgba(56, 189, 248, 0.08) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(56, 189, 248, 0.08) 1px, transparent 1px);
+    }
+
+    /* Crosshair lines */
+    .recon-crosshair-v {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 1px;
+      background: rgba(56, 189, 248, 0.25);
+      pointer-events: none;
+    }
+    .recon-crosshair-h {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 50%;
+      height: 1px;
+      background: rgba(56, 189, 248, 0.25);
+      pointer-events: none;
+    }
+
+    /* Radar scanline animation */
+    @keyframes scanline {
+      0% { transform: translateY(-100%); }
+      100% { transform: translateY(1000%); }
+    }
+    .scanline-effect {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 10px;
+      background: linear-gradient(180deg, transparent, rgba(0, 229, 255, 0.35), transparent);
+      animation: scanline 8s linear infinite;
+      pointer-events: none;
+    }
+
+    /* Thermal FLIR mode shader */
+    .thermal-mode {
+      filter: contrast(1.6) saturate(2.2) hue-rotate(180deg) invert(0.85);
+    }
+    
+    /* Multi-spectral mode shader */
+    .multi-mode {
+      filter: saturate(3) hue-rotate(90deg) contrast(1.4);
+    }
+
+    /* Tactical Bounding Box Pulsing */
+    @keyframes pulse-box {
+      0%, 100% { opacity: 0.9; }
+      50% { opacity: 0.4; }
+    }
+    .box-pulse {
+      animation: pulse-box 2.5s ease-in-out infinite;
+    }
+
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #090d16;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+  </style>
+  <!-- Real-Time Emergency Alerts & Universal Slide-Bar Drawer -->
+  <script src="assets/js/live_emergency_alerts.js"></script>
+  <script src="assets/js/nav_sidebar.js"></script>
+</head>
+
+<body class="bg-dark-bg text-slate-100 h-full overflow-hidden flex flex-col font-sans select-none">
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- ══ TOP GLOBAL NAVIGATION BAR ══ -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- ══ TOP GLOBAL NAVIGATION BAR ══ -->
+  <nav class="h-14 bg-[#090d16]/95 backdrop-blur-md border-b border-dark-border px-4 sm:px-6 flex items-center justify-between z-50 shrink-0 sticky top-0 flex-nowrap whitespace-nowrap overflow-x-hidden">
+    <div class="flex items-center gap-3 shrink-0 flex-nowrap">
+      <button onclick="window.prahariToggleSidebar()" class="prahari-slidebar-toggle-btn" title="Open Command Slide-Bar (Ctrl+B)">
+        <span class="material-symbols-outlined text-sm">menu</span>
+        <span class="text-xs font-black tracking-wide uppercase">MENU</span>
+      </button>
+
+      <a href="index.html" class="flex items-center gap-2 group shrink-0">
+        <img src="assets/logo.jpg" alt="PRITHVI-SHIELD Logo" class="w-8 h-8 object-contain rounded-lg border border-cyan-400/40 group-hover:scale-105 transition-transform" />
+        <div class="flex flex-col leading-tight">
+          <span class="font-extrabold text-sm tracking-tight text-white flex items-center gap-1">
+            PRITHVI-SHIELD <span class="text-cyan-400 font-bold">Command</span>
+          </span>
+          <span class="text-[9px] font-mono text-tactical-gold tracking-widest uppercase">AI RECON INTELLIGENCE</span>
+        </div>
+      </a>
+    </div>
+
+    <!-- Navigation Tabs - Single line horizontal layout -->
+    <div class="hidden lg:flex items-center gap-1 text-xs font-semibold text-slate-300 flex-nowrap whitespace-nowrap">
+      <a href="index.html" class="px-2.5 py-1.5 rounded hover:text-white hover:bg-slate-800/80 transition">Home</a>
+      <a href="dashboard.html" class="px-2.5 py-1.5 rounded hover:text-white hover:bg-slate-800/80 transition">Dashboard</a>
+      <a href="gis_map.html" class="px-2.5 py-1.5 rounded hover:text-white hover:bg-slate-800/80 transition">GIS Maps</a>
+      <a href="ai_risk_engine.html" class="px-2.5 py-1.5 rounded hover:text-white hover:bg-slate-800/80 transition">AI Risk Engine</a>
+      <a href="digital_twin.html" class="px-2.5 py-1.5 rounded hover:text-white hover:bg-slate-800/80 transition">3D Digital Twin</a>
+      <a href="ai_intelligence.html" class="px-2.5 py-1.5 rounded text-tactical-gold bg-tactical-gold/10 font-bold border border-tactical-gold/30">AI Recon</a>
+      <a href="alert_center.html" class="px-2.5 py-1.5 rounded text-red-400 font-bold hover:bg-red-950/40 hover:text-red-300 border border-red-500/20 transition flex items-center gap-1">
+        <span class="material-symbols-outlined text-xs text-red-400 animate-pulse">campaign</span> Alert Center
+      </a>
+      <a href="evacuation_rescue.html" class="px-2.5 py-1.5 rounded hover:text-amber-300 hover:bg-slate-800/80 transition flex items-center gap-1">
+        <span class="material-symbols-outlined text-xs text-amber-400">directions_run</span> Evacuation
+      </a>
+      <a href="citizen_safety.html" class="px-2.5 py-1.5 rounded hover:text-emerald-400 hover:bg-slate-800/80 transition">Citizen Safety</a>
+    </div>
+
+    <!-- Right Actions -->
+    <div class="flex items-center gap-2 shrink-0 flex-nowrap">
+      <a href="dashboard.html" class="bg-cyan-500/10 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-500 hover:text-slate-950 font-bold text-xs px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition">
+        <span class="material-symbols-outlined text-sm">dashboard</span> Hub
+      </a>
+      <a href="alert_center.html" class="bg-[#f87171] hover:bg-[#ef4444] text-slate-950 font-black text-xs px-3 py-1.5 rounded-lg flex items-center gap-1 uppercase tracking-wider transition shadow-md shadow-red-500/30">
+        <span class="material-symbols-outlined text-sm">campaign</span> EMERGENCY
+      </a>
+    </div>
+  </nav>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- ══ MAIN LAYOUT (Sidebar + Recon Workspace + Right Intelligence Panel) ══ -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <div class="flex flex-1 overflow-hidden">
+    
+    <!-- ══ LEFT SIDEBAR: Admin Ops ══ -->
+    <aside class="w-60 bg-[#090d16] border-r border-dark-border flex flex-col py-4 px-3 shrink-0 hidden md:flex justify-between">
+      
+      <!-- Top Section -->
+      <div class="space-y-4">
+        
+        <!-- Header -->
+        <div class="px-2">
+          <h2 class="text-base font-bold text-white tracking-tight">Admin Ops</h2>
+          <p class="text-xs text-slate-400 font-mono">Sector: NE-India</p>
+        </div>
+
+        <!-- Navigation Links -->
+        <nav class="space-y-1 text-xs font-semibold">
+          
+          <a href="dashboard.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800/60 hover:text-white transition">
+            <span class="material-symbols-outlined text-base text-slate-400">grid_view</span>
+            <span>Command Center</span>
+          </a>
+
+          <!-- AI Intelligence (Active Golden Amber Pill matching screenshot) -->
+          <a href="ai_intelligence.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-tactical-gold text-slate-950 font-bold shadow-lg shadow-amber-500/20 transition">
+            <span class="material-symbols-outlined text-base text-slate-950">psychology</span>
+            <span>AI Intelligence</span>
+          </a>
+
+          <a href="digital_twin.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800/60 hover:text-white transition">
+            <span class="material-symbols-outlined text-base text-slate-400">3d_rotation</span>
+            <span>Digital Twin</span>
+          </a>
+
+          <a href="early_warning.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800/60 hover:text-white transition">
+            <span class="material-symbols-outlined text-base text-slate-400">podcasts</span>
+            <span>Rescue Units</span>
+          </a>
+
+          <a href="gis_map.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800/60 hover:text-white transition">
+            <span class="material-symbols-outlined text-base text-slate-400">sensors</span>
+            <span>IoT Pipeline</span>
+          </a>
+
+          <a href="admin_login.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800/60 hover:text-white transition">
+            <span class="material-symbols-outlined text-base text-slate-400">settings</span>
+            <span>System Logs</span>
+          </a>
+
+        </nav>
+
+      </div>
+
+      <!-- Bottom Dispatch Unit Button (Cyan) -->
+      <div class="pt-4">
+        <button 
+          onclick="openDispatchModal('Sector 4 Landslide Recon')"
+          class="w-full bg-tactical-cyan hover:bg-cyan-300 text-slate-950 font-black text-xs py-3 px-4 rounded-lg flex items-center justify-center gap-2 uppercase tracking-wider shadow-lg shadow-cyan-500/30 transition transform active:scale-98"
+        >
+          <span class="material-symbols-outlined text-base">near_me</span>
+          <span>Dispatch Unit</span>
+        </button>
+      </div>
+
+    </aside>
+
+    <!-- ══ CENTER RECON WORKSPACE ══ -->
+    <main class="flex-1 flex flex-col min-w-0 bg-[#070a11] overflow-hidden border-r border-dark-border">
+      
+      <!-- ── Recon Header Bar ── -->
+      <div class="h-16 px-6 bg-[#090d16]/90 border-b border-dark-border flex flex-wrap items-center justify-between gap-4 shrink-0 z-20">
+        
+        <!-- Left: Sector Title & Metadata -->
+        <div class="flex items-center gap-6">
+          <h1 class="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
+            Sector 4 Landslide Recon (Dataset 3)
+          </h1>
+
+          <div class="hidden xl:flex items-center gap-5 text-xs font-mono text-slate-300">
+            <div class="flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-slate-400 text-sm">calendar_today</span>
+              <span id="reconTimestamp">2024-10-24 14:32:00Z</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-slate-400 text-sm">my_location</span>
+              <span>Lat: 25.578, Lng: 91.883</span>
+            </div>
+            <div class="flex items-center gap-1.5 text-cyan-400 font-bold">
+              <span class="material-symbols-outlined text-sm">flight</span>
+              <span>Drone: UAV-Alpha-9</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Mode Switchers (RGB / THERMAL / MULTI) & Sensitivity Slider -->
+        <div class="flex items-center gap-5">
+          
+          <!-- View Modes -->
+          <div class="inline-flex bg-[#0c1220] p-0.5 rounded-lg border border-slate-800 text-xs font-mono">
+            <button 
+              id="btnModeRGB" 
+              onclick="setReconMode('rgb')"
+              class="px-3 py-1 rounded text-cyan-400 font-bold bg-cyan-950/60 border border-cyan-500/50 shadow-sm transition"
+            >
+              RGB
+            </button>
+            <button 
+              id="btnModeThermal" 
+              onclick="setReconMode('thermal')"
+              class="px-3 py-1 rounded text-slate-400 hover:text-white transition"
+            >
+              THERMAL
+            </button>
+            <button 
+              id="btnModeMulti" 
+              onclick="setReconMode('multi')"
+              class="px-3 py-1 rounded text-slate-400 hover:text-white transition"
+            >
+              MULTI
+            </button>
+          </div>
+
+          <!-- Sensitivity Slider & Image Upload -->
+          <div class="hidden sm:flex items-center gap-4 text-xs font-mono">
+            <div class="flex items-center gap-2">
+              <span class="text-slate-400 font-semibold text-[11px] tracking-wider uppercase">SENSITIVITY</span>
+              <input 
+                type="range" 
+                min="50" 
+                max="99" 
+                value="85" 
+                id="sensitivitySlider"
+                oninput="updateSensitivity(this.value)"
+                class="w-24 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+              />
+              <span id="sensitivityVal" class="text-cyan-400 font-bold font-mono text-xs w-8 text-right">85%</span>
+            </div>
+            
+            <div class="border-l border-slate-700 pl-4">
+              <input type="file" id="droneUploadInput" accept="image/*" class="hidden" onchange="handleDroneUpload(event)" />
+              <button 
+                onclick="document.getElementById('droneUploadInput').click()"
+                class="px-3 py-1.5 rounded-lg bg-tactical-cyan text-slate-950 font-bold hover:bg-cyan-300 transition shadow-sm shadow-cyan-500/20 flex items-center gap-1.5"
+              >
+                <span class="material-symbols-outlined text-sm">upload</span>
+                UPLOAD
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- ── Tactical Drone HUD Viewport ── -->
+      <div class="flex-1 relative overflow-hidden bg-black flex items-center justify-center p-3">
+        
+        <!-- Viewport Container -->
+        <div id="reconContainer" class="relative w-full h-full rounded-xl overflow-hidden border border-slate-800 bg-[#05080f] shadow-2xl flex items-center justify-center">
+          
+          <!-- Background Drone Surveillance Photo -->
+          <img 
+            id="droneFeedImg"
+            src="assets/landslide_recon.jpg" 
+            alt="Drone Surveillance Feed" 
+            class="absolute inset-0 w-full h-full object-cover select-none transition duration-500"
+          />
+
+          <!-- Thermal Heat Spot Simulation Overlay (Visible in thermal mode) -->
+          <div id="thermalHeatLayer" class="absolute inset-0 pointer-events-none opacity-0 transition-opacity duration-300">
+            <!-- Glowing red/white thermal blob for survivor -->
+            <div class="absolute top-[48%] left-[42%] w-16 h-16 rounded-full bg-red-500/80 blur-md animate-ping"></div>
+            <div class="absolute top-[49%] left-[43%] w-10 h-10 rounded-full bg-yellow-300 blur-sm"></div>
+            <div class="absolute top-[50%] left-[44%] w-4 h-4 rounded-full bg-white"></div>
+          </div>
+
+          <!-- Tactical HUD Grid Overlay -->
+          <div class="absolute inset-0 recon-grid pointer-events-none"></div>
+
+          <!-- Scanline FX -->
+          <div class="scanline-effect"></div>
+
+          <!-- Crosshairs -->
+          <div class="recon-crosshair-v"></div>
+          <div class="recon-crosshair-h"></div>
+
+          <!-- Top-Left Tactical Label -->
+          <div class="absolute top-4 left-4 z-10 font-mono text-[11px] text-amber-400/80 uppercase tracking-widest bg-black/60 px-2 py-1 rounded border border-amber-500/30">
+            SECTOR: CASCADE RANGE
+          </div>
+
+          <!-- Elevation Label -->
+          <div class="absolute bottom-16 left-4 z-10 font-mono text-[11px] text-cyan-400/80 bg-black/60 px-2 py-1 rounded border border-cyan-500/30">
+            ELEV: 1240m
+          </div>
+
+          <!-- Center Targeting Reticle (Cyan Brackets) -->
+          <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 border border-cyan-400/30 rounded-lg pointer-events-none flex items-center justify-center">
+            <div class="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-cyan-400"></div>
+            <div class="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-cyan-400"></div>
+            <div class="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 border-cyan-400"></div>
+            <div class="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-cyan-400"></div>
+            <div class="w-3 h-3 rounded-full border border-cyan-400/60"></div>
+          </div>
+
+          <!-- ════ TACTICAL BOUNDING BOXES & LABELS (MATCHING SCREENSHOT) ════ -->
+
+          <!-- 1. UNSTABLE SLOPE (Yellow dashed box) -->
+          <div 
+            id="bbox-slope"
+            onclick="selectEntity('slope')"
+            class="absolute top-[28%] left-[47%] w-[18%] h-[16%] border-2 border-dashed border-amber-400 bg-amber-500/10 rounded cursor-pointer hover:bg-amber-500/20 transition group z-20"
+          >
+            <!-- Badge -->
+            <div class="absolute -top-6 left-0 bg-black/90 border border-amber-400 text-amber-400 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded flex items-center gap-1 shadow">
+              <span class="material-symbols-outlined text-[12px]">warning</span> UNSTABLE SLOPE
+            </div>
+          </div>
+
+          <!-- 2. SL-04 LANDSLIDE SEVERITY (Cyan HUD text callout) -->
+          <div class="absolute top-[26%] left-[68%] z-20 pointer-events-none font-mono">
+            <div class="text-cyan-400 text-xs font-black tracking-wider flex items-center gap-1 bg-black/80 px-2 py-0.5 rounded border border-cyan-500/40">
+              <span>SL-04</span>
+              <span class="text-[10px] text-slate-300">LANDSLIDE SEVERITY: HIGH</span>
+            </div>
+          </div>
+
+          <!-- 3. SURVIVOR [94%] (Pink/Salmon box with icon) -->
+          <div 
+            id="bbox-survivor"
+            onclick="selectEntity('survivor')"
+            class="absolute top-[48%] left-[41%] w-[6%] h-[8%] border-2 border-tactical-pink bg-pink-500/15 rounded cursor-pointer hover:bg-pink-500/30 transition group z-30 box-pulse flex items-center justify-center"
+          >
+            <!-- Top Tag -->
+            <div class="absolute -top-5 left-1/2 -translate-x-1/2 bg-tactical-pink text-slate-950 text-[9px] font-mono font-black px-1.5 py-0.2 rounded whitespace-nowrap shadow-md">
+              SURVIVOR [94%]
+            </div>
+            <span class="material-symbols-outlined text-tactical-pink text-lg group-hover:scale-125 transition-transform">person_alert</span>
+          </div>
+
+          <!-- 4. DEBRIS FLOW PATH (Arrow & tactical path marker) -->
+          <div 
+            id="bbox-debris"
+            onclick="selectEntity('debris')"
+            class="absolute top-[44%] left-[62%] z-20 cursor-pointer group"
+          >
+            <div class="text-amber-300 text-[11px] font-mono font-bold bg-black/80 px-2 py-0.5 rounded border border-amber-400/50 flex items-center gap-1">
+              <span>DEBRIS FLOW PATH</span>
+              <span class="material-symbols-outlined text-sm animate-bounce">arrow_downward</span>
+            </div>
+          </div>
+
+          <!-- 5. RUPTURE ZONE (Orange box) -->
+          <div 
+            id="bbox-rupture"
+            onclick="selectEntity('rupture')"
+            class="absolute top-[58%] left-[54%] w-[12%] h-[8%] border border-orange-500 bg-orange-500/10 rounded cursor-pointer hover:bg-orange-500/20 transition z-20"
+          >
+            <div class="absolute -top-5 left-0 bg-black/80 text-orange-400 text-[9px] font-mono px-1.5 py-0.5 rounded border border-orange-500/40">
+              RUPTURE ZONE
+            </div>
+          </div>
+
+          <!-- 6. AFFECTED INFRASTRUCTURE: Logging Road -->
+          <div class="absolute top-[65%] left-[65%] z-20 pointer-events-none font-mono">
+            <div class="text-slate-200 text-[10px] bg-black/85 px-2 py-1 rounded border border-slate-700">
+              <span class="text-amber-400 font-bold block">AFFECTED INFRASTRUCTURE</span>
+              Logging Road (Cut off)
+            </div>
+          </div>
+
+          <!-- 7. STRUCTURE: DESTROYED (Cyan Bounding Box) -->
+          <div 
+            id="bbox-structure"
+            onclick="selectEntity('structure')"
+            class="absolute top-[68%] left-[32%] w-[11%] h-[12%] border-2 border-cyan-400 bg-cyan-500/15 rounded cursor-pointer hover:bg-cyan-500/30 transition z-20"
+          >
+            <div class="absolute -top-6 left-0 bg-black/90 text-cyan-400 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border border-cyan-400 shadow">
+              STRUCTURE: DESTROYED
+            </div>
+          </div>
+
+          <!-- ── Bottom-Right Telemetry Box (HUD) ── -->
+          <div class="absolute bottom-4 right-4 bg-black/85 border border-slate-800 rounded-lg p-3 font-mono text-[11px] z-30 shadow-2xl min-w-[150px]">
+            <div class="grid grid-cols-2 gap-x-3 gap-y-1">
+              <span class="text-cyan-400 font-bold">ALTITUDE</span>
+              <span class="text-cyan-300 text-right font-bold">458m AGL</span>
+              
+              <span class="text-slate-400">PITCH</span>
+              <span class="text-slate-200 text-right">-45.2°</span>
+              
+              <span class="text-slate-400">YAW</span>
+              <span class="text-slate-200 text-right">12.4°</span>
+              
+              <span class="text-slate-400">GSD</span>
+              <span class="text-slate-200 text-right">2.5 cm/px</span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </main>
+
+    <!-- ══ RIGHT SIDEBAR: Tactical Detection & Terrain Intelligence ══ -->
+    <aside class="w-80 lg:w-96 bg-[#090d16] p-4 flex flex-col gap-4 overflow-y-auto shrink-0 z-30">
+      
+      <!-- ── CARD 1: Detection Intelligence (14 Entities) ── -->
+      <div class="bg-[#0d1322] border border-dark-border rounded-xl p-4 space-y-3">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2 text-cyan-400 font-black text-sm">
+            <span class="material-symbols-outlined text-base">center_focus_strong</span>
+            <span>Detection Intelligence</span>
+          </div>
+          <span class="bg-cyan-950 text-cyan-300 border border-cyan-800/80 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full">
+            14 ENTITIES
+          </span>
+        </div>
+
+        <!-- Entity List -->
+        <div class="space-y-2 text-xs">
+          
+          <!-- 1. Survivor #12 -->
+          <div 
+            id="card-survivor"
+            onclick="focusEntity('survivor')"
+            class="p-2.5 rounded-lg bg-[#11192e] border-l-4 border-tactical-pink border-t border-r border-b border-dark-border cursor-pointer hover:bg-slate-800 transition space-y-1"
+          >
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-white flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-tactical-pink text-sm">person_alert</span> Survivor #12
+              </span>
+              <span class="text-tactical-pink font-mono font-bold text-[10px] bg-pink-950/60 px-1.5 py-0.5 rounded border border-pink-800/50">
+                94% CONF
+              </span>
+            </div>
+            <p class="text-slate-400 font-mono text-[11px]">GPS: 25.5781, 91.8834</p>
+            <p class="text-slate-300 text-[11px]">Status: Stationary, Thermal Signature (+)</p>
+          </div>
+
+          <!-- 2. Unstable Slope Zone -->
+          <div 
+            id="card-slope"
+            onclick="focusEntity('slope')"
+            class="p-2.5 rounded-lg bg-[#11192e] border-l-4 border-amber-400 border-t border-r border-b border-dark-border cursor-pointer hover:bg-slate-800 transition space-y-1"
+          >
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-white flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-amber-400 text-sm">warning</span> Unstable Slope Zone
+              </span>
+              <span class="text-amber-400 font-mono font-bold text-[10px] bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-800/50">
+                88% CONF
+              </span>
+            </div>
+            <p class="text-slate-400 font-mono text-[11px]">Est. Area: 1,200 sq m</p>
+            <p class="text-amber-200/90 text-[11px]">Risk: Secondary Slide Imminent</p>
+          </div>
+
+          <!-- 3. Structure Damage -->
+          <div 
+            id="card-structure"
+            onclick="focusEntity('structure')"
+            class="p-2.5 rounded-lg bg-[#11192e] border-l-4 border-cyan-400 border-t border-r border-b border-dark-border cursor-pointer hover:bg-slate-800 transition space-y-1"
+          >
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-white flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-cyan-400 text-sm">home_work</span> Structure Damage
+              </span>
+              <span class="text-cyan-400 font-mono font-bold text-[10px] bg-cyan-950/60 px-1.5 py-0.5 rounded border border-cyan-800/50">
+                98% CONF
+              </span>
+            </div>
+            <p class="text-slate-400 text-[11px]">Type: Residential Settlement</p>
+            <p class="text-slate-300 text-[11px]">Damage Extent: Total Collapse</p>
+          </div>
+
+          <!-- 4. Debris Flow Path -->
+          <div 
+            id="card-debris"
+            onclick="focusEntity('debris')"
+            class="p-2.5 rounded-lg bg-[#11192e] border-l-4 border-slate-500 border-t border-r border-b border-dark-border cursor-pointer hover:bg-slate-800 transition space-y-1"
+          >
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-white flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-slate-400 text-sm">timeline</span> Debris Flow Path
+              </span>
+              <span class="text-slate-300 font-mono font-bold text-[10px] bg-slate-800 px-1.5 py-0.5 rounded">
+                CALCULATED
+              </span>
+            </div>
+            <p class="text-slate-400 text-[11px]">Velocity: 14.2 m/s &bull; Runout: 420m</p>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- ── CARD 2: Terrain Impact Analytics ── -->
+      <div class="bg-[#0d1322] border border-dark-border rounded-xl p-4 space-y-3">
+        
+        <h3 class="text-xs font-bold text-slate-200 uppercase tracking-wider">
+          Terrain Impact Analytics
+        </h3>
+
+        <!-- Big Metric Stats -->
+        <div class="grid grid-cols-2 gap-3">
+          
+          <div class="bg-[#070a12] p-2.5 rounded-lg border border-slate-800">
+            <span class="text-[10px] font-mono text-slate-400 block uppercase">VOLUMETRIC DISPLACEMENT</span>
+            <div class="text-xl font-black text-tactical-gold font-mono mt-0.5">
+              45,200 <span class="text-xs text-slate-400">m³</span>
+            </div>
+          </div>
+
+          <div class="bg-[#070a12] p-2.5 rounded-lg border border-slate-800">
+            <span class="text-[10px] font-mono text-slate-400 block uppercase">AREA COVERAGE</span>
+            <div class="text-xl font-black text-cyan-400 font-mono mt-0.5">
+              12.4 <span class="text-xs text-slate-400">ha</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Elevation Profile Shift (Mini Bar Graph) -->
+        <div class="bg-[#070a12] p-3 rounded-lg border border-slate-800 space-y-2">
+          <div class="flex items-center justify-between text-[10px] font-mono text-slate-400">
+            <span>ELEVATION PROFILE SHIFT</span>
+            <span class="text-cyan-400">Δ -18.4m</span>
+          </div>
+
+          <!-- Bars matching screenshot -->
+          <div class="flex items-end gap-1.5 h-12 pt-2 px-1">
+            <div class="flex-1 bg-slate-700 h-[25%] rounded-t-sm" title="Sector A1: 25%"></div>
+            <div class="flex-1 bg-slate-600 h-[40%] rounded-t-sm" title="Sector A2: 40%"></div>
+            <div class="flex-1 bg-slate-600 h-[55%] rounded-t-sm" title="Sector A3: 55%"></div>
+            <div class="flex-1 bg-tactical-gold h-[85%] rounded-t-sm" title="Sector A4: 85%"></div>
+            <div class="flex-1 bg-tactical-pink h-[95%] rounded-t-sm" title="Sector A5: 95% Peak Scarp"></div>
+            <div class="flex-1 bg-tactical-gold h-[70%] rounded-t-sm" title="Sector A6: 70%"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ── CARD 3: Rescue Priority Matrix (Red/Salmon Border Glow) ── -->
+      <div class="bg-[#0d1322] border-2 border-red-500/60 shadow-lg shadow-red-500/10 rounded-xl p-4 space-y-3">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-1.5 text-tactical-salmon font-bold text-xs">
+            <span class="material-symbols-outlined text-sm">crisis_alert</span>
+            <span>Rescue Priority Matrix</span>
+          </div>
+          <span class="text-tactical-salmon material-symbols-outlined text-base animate-pulse">sensors</span>
+        </div>
+
+        <!-- Table -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-[11px] font-mono">
+            <thead>
+              <tr class="text-slate-400 border-b border-slate-800 text-[10px] text-left">
+                <th class="pb-1 font-semibold">TARGET</th>
+                <th class="pb-1 font-semibold">PROXIMITY TO HAZARD</th>
+                <th class="pb-1 font-semibold text-right">ACTION</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800">
+              
+              <!-- Row 1: S-12 (Critical Extract) -->
+              <tr class="hover:bg-slate-800/50 transition">
+                <td class="py-2 text-white font-bold">S-12</td>
+                <td class="py-2">
+                  <span class="bg-red-950/80 text-tactical-salmon border border-red-800/80 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                    12m (CRITICAL)
+                  </span>
+                </td>
+                <td class="py-2 text-right">
+                  <button 
+                    onclick="openDispatchModal('Survivor #12 (S-12)')"
+                    class="bg-transparent hover:bg-tactical-salmon hover:text-slate-950 text-slate-200 border border-slate-700 hover:border-tactical-salmon font-bold text-[10px] px-2 py-0.5 rounded transition uppercase"
+                  >
+                    EXTRACT
+                  </button>
+                </td>
+              </tr>
+
+              <!-- Row 2: S-04 (Warn Monitor) -->
+              <tr class="hover:bg-slate-800/50 transition">
+                <td class="py-2 text-white font-bold">S-04</td>
+                <td class="py-2">
+                  <span class="bg-amber-950/80 text-amber-300 border border-amber-800/80 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                    45m (WARN)
+                  </span>
+                </td>
+                <td class="py-2 text-right">
+                  <button 
+                    onclick="focusEntity('slope')"
+                    class="bg-transparent hover:bg-amber-400 hover:text-slate-950 text-slate-200 border border-slate-700 hover:border-amber-400 font-bold text-[10px] px-2 py-0.5 rounded transition uppercase"
+                  >
+                    MONITOR
+                  </button>
+                </td>
+              </tr>
+
+              <!-- Row 3: S-08 (Standby) -->
+              <tr class="hover:bg-slate-800/50 transition">
+                <td class="py-2 text-white font-bold">S-08</td>
+                <td class="py-2 text-slate-400">120m (STANDBY)</td>
+                <td class="py-2 text-right">
+                  <span class="text-slate-500 text-[10px]">QUEUED</span>
+                </td>
+              </tr>
+
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+
+    </aside>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- ══ DISPATCH / EMERGENCY ACTION MODAL ══ -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <div id="dispatchModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-[#0d1322] border-2 border-cyan-500/50 rounded-2xl max-w-lg w-full p-6 space-y-5 shadow-2xl shadow-cyan-500/20 text-slate-100">
+      
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-cyan-400 text-2xl">near_me</span>
+          <div>
+            <h3 class="text-lg font-black text-white">Rapid Tactical Dispatch</h3>
+            <p class="text-xs text-slate-400 font-mono">NE-SAFE Command Protocol #912</p>
+          </div>
+        </div>
+        <button onclick="closeDispatchModal()" class="text-slate-400 hover:text-white p-1 rounded">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div class="bg-[#070a12] p-3 rounded-lg border border-slate-800 space-y-1">
+          <div class="text-slate-400 font-mono text-[10px] uppercase">TARGET DESIGNATION</div>
+          <div id="modalTargetName" class="text-sm font-bold text-tactical-gold font-mono">Survivor #12 (S-12)</div>
+          <div class="text-slate-300 font-mono text-[11px]">COORDINATES: Lat 25.5781, Lng 91.8834 (Sector 4)</div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-[#070a12] p-3 rounded-lg border border-slate-800">
+            <span class="text-slate-400 text-[10px] block">ASSIGNED RESCUE UNIT</span>
+            <span class="font-bold text-white text-xs">NDRF Battalion 12 (Helicopter Squad)</span>
+          </div>
+          <div class="bg-[#070a12] p-3 rounded-lg border border-slate-800">
+            <span class="text-slate-400 text-[10px] block">ESTIMATED ETA</span>
+            <span class="font-bold text-cyan-400 font-mono text-sm">4.8 MIN</span>
+          </div>
+        </div>
+
+        <div class="bg-[#070a12] p-3 rounded-lg border border-slate-800">
+          <span class="text-slate-400 text-[10px] block mb-1">HAZARD BRIEFING</span>
+          <p class="text-amber-300/90 text-[11px]">Secondary slope rupture risk at 88%. Approach via Northern Ridge LZ-3. Avoid active debris gully.</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3 pt-2">
+        <button 
+          onclick="closeDispatchModal()"
+          class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 rounded-lg text-xs transition"
+        >
+          Cancel
+        </button>
+        <button 
+          onclick="executeDispatch()"
+          class="flex-1 bg-tactical-cyan hover:bg-cyan-300 text-slate-950 font-black py-2.5 rounded-lg text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/30 transition flex items-center justify-center gap-1.5"
+        >
+          <span class="material-symbols-outlined text-sm">check_circle</span> Confirm & Authorize
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- ══ JAVASCRIPT CONTROLLER ══ -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <script>
+    // Live Recon Mode Switcher
+    function setReconMode(mode) {
+      const img = document.getElementById('droneFeedImg');
+      const heatLayer = document.getElementById('thermalHeatLayer');
+      const btnRGB = document.getElementById('btnModeRGB');
+      const btnThermal = document.getElementById('btnModeThermal');
+      const btnMulti = document.getElementById('btnModeMulti');
+
+      // Reset buttons
+      [btnRGB, btnThermal, btnMulti].forEach(b => {
+        b.className = 'px-3 py-1 rounded text-slate-400 hover:text-white transition';
+      });
+
+      img.classList.remove('thermal-mode', 'multi-mode');
+      heatLayer.style.opacity = '0';
+
+      if (mode === 'rgb') {
+        btnRGB.className = 'px-3 py-1 rounded text-cyan-400 font-bold bg-cyan-950/60 border border-cyan-500/50 shadow-sm transition';
+      } else if (mode === 'thermal') {
+        btnThermal.className = 'px-3 py-1 rounded text-red-400 font-bold bg-red-950/60 border border-red-500/50 shadow-sm transition';
+        img.classList.add('thermal-mode');
+        heatLayer.style.opacity = '1';
+      } else if (mode === 'multi') {
+        btnMulti.className = 'px-3 py-1 rounded text-emerald-400 font-bold bg-emerald-950/60 border border-emerald-500/50 shadow-sm transition';
+        img.classList.add('multi-mode');
+      }
+    }
+
+    // Sensitivity Slider Handler
+    function updateSensitivity(val) {
+      document.getElementById('sensitivityVal').innerText = val + '%';
+      
+      const survivorBox = document.getElementById('bbox-survivor');
+      const slopeBox = document.getElementById('bbox-slope');
+      
+      // If sensitivity is super high, lower confidence objects might dim
+      if (val > 90) {
+        slopeBox.style.opacity = '0.4';
+      } else {
+        slopeBox.style.opacity = '1';
+      }
+    }
+
+    // Entity Focus Interaction
+    function focusEntity(type) {
+      selectEntity(type);
+    }
+
+    function selectEntity(type) {
+      // Remove all card highlights
+      ['card-survivor', 'card-slope', 'card-structure', 'card-debris'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('ring-2', 'ring-cyan-400');
+      });
+
+      const cardId = 'card-' + type;
+      const targetCard = document.getElementById(cardId);
+      if (targetCard) {
+        targetCard.classList.add('ring-2', 'ring-cyan-400');
+        targetCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+
+    // Modal Controller
+    function openDispatchModal(targetName) {
+      document.getElementById('modalTargetName').innerText = targetName || 'Sector 4 Extraction Target';
+      document.getElementById('dispatchModal').classList.remove('hidden');
+    }
+
+    function closeDispatchModal() {
+      document.getElementById('dispatchModal').classList.add('hidden');
+    }
+
+    function executeDispatch() {
+      alert('🚨 DISPATCH AUTHORIZED! NDRF Unit 12 deployed with UAV Relay telemetry to Sector 4 (25.578, 91.883).');
+      closeDispatchModal();
+    }
+
+    function openEmergencyModal() {
+      openDispatchModal('🚨 EMERGENCY BROADCAST: Sector 4 Rapid Evacuation & Rescue');
+    }
+
+    // Call API to analyze drone image
+    async function fetchDroneAnalysis() {
+      const apiHost = window.getApiBaseUrl ? window.getApiBaseUrl() : 'http://127.0.0.1:8000';
+      try {
+        const response = await fetch(`${apiHost}/analyze-drone-image`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            image_url: 'assets/landslide_recon.jpg',
+            dataset_id: 'dataset_3'
+          })
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log("Drone Analysis Result:", data);
+          if (data.metadata && (data.metadata.model_used || data.model)) {
+            const reconHeader = document.getElementById('reconTimestamp');
+            if (reconHeader) {
+               reconHeader.innerHTML += ` | AI: ${data.metadata.model_used || data.model}`;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("Using offline drone analysis mode:", e);
+      }
+    }
+
+    // Handle Upload
+    async function handleDroneUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      const img = document.getElementById('droneFeedImg');
+      const reader = new FileReader();
+      
+      reader.onload = function(e) {
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+      
+      try {
+        if (window.PrithviShieldAPI && window.PrithviShieldAPI.analyzeDroneImage) {
+          const result = await window.PrithviShieldAPI.analyzeDroneImage(file);
+          console.log("Uploaded Drone Image Analysis Result:", result);
+          if (result && result.detections) {
+            alert('AI Drone Analysis complete! Found ' + result.detections.length + ' disaster entities & survivor signatures.');
+          }
+        }
+      } catch (err) {
+        console.error("Failed to analyze uploaded image", err);
+      }
+    }
+
+    // Initialize API call on load
+    window.addEventListener('DOMContentLoaded', () => {
+      fetchDroneAnalysis();
+    });
+  </script>
+
+</body>
+</html>

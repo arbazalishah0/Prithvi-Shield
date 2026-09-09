@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html class="h-full dark" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>Live GIS Landslide Risk Map — PRITHVI-SHIELD Command (SIH 2026)</title>
+  
+  <!-- Google Fonts & Material Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+  
+  <!-- Leaflet CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "dark-bg": "#090d16",
+            "dark-surface": "#0d1322",
+            "dark-panel": "#111827",
+            "dark-card": "#0f172a",
+            "dark-border": "#1e293b",
+            "dark-border-light": "#334155",
+            "tactical-gold": "#f59e0b",
+            "tactical-gold-hover": "#fbbf24",
+            "tactical-cyan": "#00e5ff",
+            "tactical-cyan-dark": "#0284c7",
+            "tactical-salmon": "#f87171",
+            "tactical-salmon-dark": "#ef4444",
+            "tactical-pink": "#fb7185",
+            "primary": "#000a1e",
+            "primary-container": "#002147",
+            "secondary": "#b6171e",
+            "secondary-container": "#da3433"
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    #map {
+      width: 100%;
+      height: 100%;
+      background: #05080e;
+    }
+    .leaflet-container {
+      background-color: #070a12 !important;
+      font-family: 'Inter', sans-serif !important;
+    }
+    /* Custom Leaflet Dark Popup */
+    .leaflet-popup-content-wrapper {
+      background: rgba(13, 19, 34, 0.95) !important;
+      color: #f1f5f9 !important;
+      border: 1px solid #00e5ff40 !important;
+      border-radius: 12px !important;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.8), 0 0 15px rgba(0, 229, 255, 0.2) !important;
+      backdrop-filter: blur(8px);
+      padding: 0 !important;
+    }
+    .leaflet-popup-content {
+      margin: 12px 14px !important;
+      line-height: 1.4 !important;
+    }
+    .leaflet-popup-tip {
+      background: #0d1322 !important;
+      border: 1px solid #00e5ff40 !important;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 4px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: #090d16;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 4px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+      background: #00e5ff;
+    }
+    .glow-cyan {
+      box-shadow: 0 0 15px rgba(0, 229, 255, 0.35);
+    }
+    .pulse-dot {
+      animation: pulse-animation 2s infinite;
+    }
+    @keyframes pulse-animation {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+  </style>
+
+  <!-- Load Landslide Dataset & ML Engine -->
+  <script src="assets/data/landslide_points_data.js"></script>
+  <!-- Load FastAPI Backend Client -->
+  <script src="assets/js/api_client.js"></script>
+  <!-- Real-Time Emergency Alerts & Universal Slide-Bar Drawer -->
+  <script src="assets/js/live_emergency_alerts.js"></script>
+  <script src="assets/js/nav_sidebar.js"></script>
+</head>
+
+<body class="bg-dark-bg text-slate-100 h-full overflow-hidden flex flex-col font-sans select-none">
+
+  <!-- ══ TOP GLOBAL NAVIGATION BAR ══ -->
+  <nav class="h-14 bg-[#090d16] border-b border-dark-border px-4 sm:px-6 flex items-center justify-between z-50 shrink-0 flex-nowrap whitespace-nowrap overflow-x-hidden">
+    <div class="flex items-center gap-3 shrink-0 flex-nowrap">
+      <button onclick="window.prahariToggleSidebar()" class="prahari-slidebar-toggle-btn" title="Open Command Slide-Bar (Ctrl+B)">
+        <span class="material-symbols-outlined text-sm">menu</span>
+        <span class="text-xs font-black tracking-wide uppercase">MENU</span>
+      </button>
+
+      <a href="index.html" class="flex items-center gap-2 group shrink-0">
+        <img src="assets/logo.jpg" alt="PRITHVI-SHIELD Logo" class="w-8 h-8 object-contain rounded-lg border border-cyan-400/40 group-hover:scale-105 transition-transform" />
+        <div class="flex flex-col leading-tight">
+          <span class="font-extrabold text-sm tracking-tight text-white flex items-center gap-1">
+            PRITHVI-SHIELD <span class="text-cyan-400 font-bold">Command</span>
+          </span>
+          <span class="text-[9px] font-mono text-tactical-gold tracking-widest uppercase">GIS SPATIAL INTELLIGENCE</span>
+        </div>
+      </a>
+    </div>
+
+    <!-- Main Navigation Links -->
+    <div class="hidden lg:flex items-center gap-1 text-xs font-semibold text-slate-300 flex-nowrap whitespace-nowrap">
+      <a href="index.html" class="px-2.5 py-1.5 rounded hover:text-white hover:bg-slate-800/80 transition">Home</a>
+      <a href="dashboard.html" class="px-2.5 py-1.5 rounded hover:text-white hover:bg-slate-800/80 transition">Dashboard</a>
+      <a href="gis_map.html" class="px-2.5 py-1.5 rounded text-cyan-400 font-bold bg-cyan-950/60 border border-cyan-500/30">GIS Maps</a>
+      <a href="ai_risk_engine.html" class="px-2.5 py-1.5 rounded hover:text-white hover:bg-slate-800/80 transition">AI Risk Engine</a>
+      <a href="digital_twin.html" class="px-2.5 py-1.5 rounded hover:text-white hover:bg-slate-800/80 transition">3D Digital Twin</a>
+      <a href="alert_center.html" class="px-2.5 py-1.5 rounded text-red-400 font-bold hover:bg-red-950/40 hover:text-red-300 border border-red-500/20 transition flex items-center gap-1">
+        <span class="material-symbols-outlined text-xs text-red-400 animate-pulse">campaign</span> Alert Center
+      </a>
+      <a href="evacuation_rescue.html" class="px-2.5 py-1.5 rounded hover:text-amber-300 hover:bg-slate-800/80 transition flex items-center gap-1">
+        <span class="material-symbols-outlined text-xs text-amber-400">directions_run</span> Evacuation
+      </a>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="flex items-center gap-2.5 shrink-0 flex-nowrap">
+      <button 
+        onclick="openApiKeyModal()" 
+        class="hidden sm:flex items-center gap-1 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs font-mono text-cyan-300 font-bold transition shadow"
+        title="Configure Backend API Key & Host"
+      >
+        <span class="material-symbols-outlined text-sm text-cyan-400">vpn_key</span>
+        <span id="apiKeyStatusText">API</span>
+      </button>
+
+      <div class="hidden md:flex items-center gap-1.5 px-2.5 py-1 bg-[#0d1322] border border-dark-border rounded-lg text-xs font-mono">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <b class="text-cyan-400 font-bold text-[11px]" id="headerPointCount">8,532 Points</b>
+      </div>
+
+      <a 
+        href="alert_center.html" 
+        class="bg-[#f87171] hover:bg-[#ef4444] text-slate-950 font-black text-xs px-3 py-1.5 rounded-lg flex items-center gap-1 uppercase tracking-wider shadow-md shadow-red-500/30 transition transform active:scale-95"
+      >
+        <span class="material-symbols-outlined text-sm">campaign</span> SEND ALERT
+      </a>
+    </div>
+  </nav>
+
+  <!-- ══ MAIN LAYOUT ══ -->
+  <div class="flex flex-1 overflow-hidden relative">
+    
+    <!-- ══ LEFT SIDEBAR: Layer Stack & Tactical Controls ══ -->
+    <aside class="w-80 bg-[#090d16] border-r border-dark-border flex flex-col py-3 px-3.5 shrink-0 hidden md:flex justify-between overflow-y-auto custom-scroll z-20">
+      <div class="space-y-3.5">
+        
+        <!-- Header & Executive Stats -->
+        <div class="bg-[#0d1322] p-3 rounded-xl border border-dark-border space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="text-xs font-black text-white flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-cyan-400 text-sm">map</span>
+              BHU-RAKSHA GIS MATRIX
+            </span>
+            <span class="text-[10px] bg-cyan-950 text-cyan-300 border border-cyan-800 px-1.5 py-0.5 rounded font-mono font-bold">
+              INDIA V4.2
+            </span>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-center text-xs font-mono pt-1">
+            <div class="bg-[#070a12] p-2 rounded-lg border border-slate-800">
+              <span class="text-[10px] text-slate-400 block">CRITICAL ZONES</span>
+              <span class="text-tactical-salmon font-extrabold text-sm" id="statVeryHigh">3,855</span>
+            </div>
+            <div class="bg-[#070a12] p-2 rounded-lg border border-slate-800">
+              <span class="text-[10px] text-slate-400 block">SPATIAL ROC-AUC</span>
+              <span class="text-tactical-gold font-extrabold text-sm">0.8524</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Backend API Key & Host Status Card -->
+        <div class="bg-[#0d1322] p-3 rounded-xl border border-dark-border space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="text-[11px] font-mono font-bold text-slate-300 uppercase flex items-center gap-1">
+              <span class="material-symbols-outlined text-xs text-cyan-400">vpn_key</span>
+              FastAPI Key Link
+            </span>
+            <span id="sidebarApiBadge" class="text-[9px] bg-emerald-950 text-emerald-300 border border-emerald-800 px-1.5 py-0.5 rounded font-mono font-bold">
+              READY
+            </span>
+          </div>
+          <div class="text-[11px] font-mono text-slate-400 space-y-1">
+            <div class="flex justify-between">
+              <span>Host:</span>
+              <span class="text-cyan-300 truncate max-w-[130px]" id="sidebarApiHost">Auto-Detect</span>
+            </div>
+            <div class="flex justify-between">
+              <span>API Key:</span>
+              <span class="text-slate-300 font-bold" id="sidebarKeyStatus">Unset (Default)</span>
+            </div>
+          </div>
+          <button onclick="openApiKeyModal()" class="w-full bg-[#070a12] hover:bg-slate-800 border border-slate-700 text-cyan-300 hover:text-white text-[11px] font-mono font-bold py-1.5 rounded-lg transition text-center flex items-center justify-center gap-1">
+            <span class="material-symbols-outlined text-xs">tune</span> Configure API Key
+          </button>
+        </div>
+
+        <!-- Search by Latitude & Longitude -->
+        <div class="bg-[#0d1322] p-3 rounded-xl border border-cyan-500/40 space-y-2.5 shadow-lg shadow-cyan-950/40">
+          <div class="flex justify-between items-center">
+            <span class="text-[11px] font-mono font-bold text-cyan-300 uppercase flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-xs text-cyan-400">pin_drop</span>
+              Search by Lat &amp; Long
+            </span>
+            <span class="text-[9px] bg-cyan-950 text-cyan-300 border border-cyan-800 px-1.5 py-0.5 rounded font-mono font-bold">
+              GPS JUMP
+            </span>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+            <div>
+              <label class="text-[10px] text-slate-400 block mb-0.5 font-sans font-semibold">Latitude (°N)</label>
+              <input 
+                type="number" 
+                step="0.0001" 
+                id="sidebarLatInput" 
+                placeholder="e.g. 27.3389" 
+                value="27.3389"
+                class="w-full bg-[#070a12] border border-slate-700 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 rounded-lg p-1.5 text-xs text-cyan-200 font-mono outline-none"
+              />
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-400 block mb-0.5 font-sans font-semibold">Longitude (°E)</label>
+              <input 
+                type="number" 
+                step="0.0001" 
+                id="sidebarLngInput" 
+                placeholder="e.g. 88.6065" 
+                value="88.6065"
+                class="w-full bg-[#070a12] border border-slate-700 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 rounded-lg p-1.5 text-xs text-cyan-200 font-mono outline-none"
+              />
+            </div>
+          </div>
+          <button 
+            onclick="manualLatLonSearch()" 
+            class="w-full bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-slate-950 font-extrabold text-xs font-mono py-1.5 rounded-lg transition text-center flex items-center justify-center gap-1.5 shadow-md shadow-cyan-600/30"
+          >
+            <span class="material-symbols-outlined text-sm">explore</span> Locate &amp; AI Assess
+          </button>
+        </div>
+
+        <!-- Regional Quick Teleport -->
+        <div class="bg-[#0d1322] p-3 rounded-xl border border-dark-border space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="text-[11px] font-mono font-bold text-slate-300 uppercase flex items-center gap-1">
+              <span class="material-symbols-outlined text-xs text-tactical-gold">location_searching</span>
+              Sector Teleport
+            </span>
+            <span class="text-[10px] text-slate-500 font-mono">Hotspots</span>
+          </div>
+          <div class="grid grid-cols-2 gap-1.5 text-xs font-semibold">
+            <button onclick="teleportTo('india')" class="bg-[#070a12] hover:bg-slate-800 text-slate-300 hover:text-white p-2 rounded-lg border border-slate-800 transition text-left text-[11px] flex items-center gap-1.5">
+              <span>🇮🇳</span> All India View
+            </button>
+            <button onclick="teleportTo('wayanad')" class="bg-[#070a12] hover:bg-red-950/40 text-slate-300 hover:text-tactical-salmon p-2 rounded-lg border border-slate-800 hover:border-red-800 transition text-left text-[11px] flex items-center gap-1.5">
+              <span>🔴</span> Wayanad, KL
+            </button>
+            <button onclick="teleportTo('sikkim')" class="bg-[#070a12] hover:bg-amber-950/40 text-slate-300 hover:text-amber-300 p-2 rounded-lg border border-slate-800 hover:border-amber-800 transition text-left text-[11px] flex items-center gap-1.5">
+              <span>⛰️</span> Gangtok, SK
+            </button>
+            <button onclick="teleportTo('joshimath')" class="bg-[#070a12] hover:bg-orange-950/40 text-slate-300 hover:text-orange-300 p-2 rounded-lg border border-slate-800 hover:border-orange-800 transition text-left text-[11px] flex items-center gap-1.5">
+              <span>🏔️</span> Joshimath, UK
+            </button>
+            <button onclick="teleportTo('shillong')" class="bg-[#070a12] hover:bg-cyan-950/40 text-slate-300 hover:text-cyan-300 p-2 rounded-lg border border-slate-800 hover:border-cyan-800 transition text-left text-[11px] flex items-center gap-1.5">
+              <span>🌧️</span> Shillong, ML
+            </button>
+            <button onclick="teleportTo('shimla')" class="bg-[#070a12] hover:bg-slate-800 text-slate-300 hover:text-white p-2 rounded-lg border border-slate-800 transition text-left text-[11px] flex items-center gap-1.5">
+              <span>❄️</span> Shimla, HP
+            </button>
+          </div>
+        </div>
+
+        <!-- Layer Stack & Multi-Hazard Overlays -->
+        <div class="bg-[#0d1322] p-3 rounded-xl border border-dark-border space-y-2.5">
+          <div class="flex justify-between items-center">
+            <span class="text-[11px] font-mono font-bold text-slate-300 uppercase flex items-center gap-1">
+              <span class="material-symbols-outlined text-xs text-cyan-400">layers</span>
+              GIS Layer Stack
+            </span>
+            <span class="text-[10px] text-cyan-400 font-mono cursor-pointer hover:underline" onclick="toggleAllLayers()">Toggle All</span>
+          </div>
+
+          <div class="space-y-2 text-xs">
+            <label class="flex items-center justify-between cursor-pointer p-1.5 rounded hover:bg-slate-800/40 transition">
+              <div class="flex items-center gap-2">
+                <input type="checkbox" id="layerHeatmap" checked onchange="updateLayers()" class="rounded bg-slate-800 border-slate-700 text-tactical-salmon focus:ring-0" />
+                <span class="text-slate-200 font-medium">🔥 Landslide Susceptibility Heatmap</span>
+              </div>
+              <span class="text-[10px] text-slate-400 font-mono">8.5k pts</span>
+            </label>
+
+            <label class="flex items-center justify-between cursor-pointer p-1.5 rounded hover:bg-slate-800/40 transition">
+              <div class="flex items-center gap-2">
+                <input type="checkbox" id="layerCriticalMarkers" checked onchange="updateLayers()" class="rounded bg-slate-800 border-slate-700 text-red-500 focus:ring-0" />
+                <span class="text-slate-200 font-medium">🔴 Critical / High Hazard Pins</span>
+              </div>
+              <span class="text-[10px] text-red-400 font-mono">4.2k</span>
+            </label>
+
+            <label class="flex items-center justify-between cursor-pointer p-1.5 rounded hover:bg-slate-800/40 transition">
+              <div class="flex items-center gap-2">
+                <input type="checkbox" id="layerModerateMarkers" onchange="updateLayers()" class="rounded bg-slate-800 border-slate-700 text-yellow-400 focus:ring-0" />
+                <span class="text-slate-200 font-medium">🟡 Moderate &amp; Low Hazard Pins</span>
+              </div>
+              <span class="text-[10px] text-slate-400 font-mono">4.3k</span>
+            </label>
+
+            <label class="flex items-center justify-between cursor-pointer p-1.5 rounded hover:bg-slate-800/40 transition">
+              <div class="flex items-center gap-2">
+                <input type="checkbox" id="layerSensors" checked onchange="updateLayers()" class="rounded bg-slate-800 border-slate-700 text-emerald-400 focus:ring-0" />
+                <span class="text-slate-200 font-medium">📡 Geotechnical IoT Sensor Nodes</span>
+              </div>
+              <span class="text-[10px] text-emerald-400 font-mono">18 nodes</span>
+            </label>
+
+            <label class="flex items-center justify-between cursor-pointer p-1.5 rounded hover:bg-slate-800/40 transition">
+              <div class="flex items-center gap-2">
+                <input type="checkbox" id="layerIsobars" onchange="updateLayers()" class="rounded bg-slate-800 border-slate-700 text-cyan-400 focus:ring-0" />
+                <span class="text-slate-200 font-medium">🌧️ IMD Rainfall Isohyet Isobars</span>
+              </div>
+              <span class="text-[10px] text-cyan-400 font-mono">CHIRPS</span>
+            </label>
+
+            <label class="flex items-center justify-between cursor-pointer p-1.5 rounded hover:bg-slate-800/40 transition">
+              <div class="flex items-center gap-2">
+                <input type="checkbox" id="layerEvacRoutes" checked onchange="updateLayers()" class="rounded bg-slate-800 border-slate-700 text-purple-400 focus:ring-0" />
+                <span class="text-slate-200 font-medium">🛣️ National Highway Hazard Corridors</span>
+              </div>
+              <span class="text-[10px] text-purple-400 font-mono">NH-10 / 66</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Dynamic Filter Controls -->
+        <div class="bg-[#0d1322] p-3 rounded-xl border border-dark-border space-y-2.5">
+          <div class="flex justify-between items-center">
+            <span class="text-[11px] font-mono font-bold text-slate-300 uppercase flex items-center gap-1">
+              <span class="material-symbols-outlined text-xs text-tactical-pink">tune</span>
+              Risk Probability Filter
+            </span>
+            <span class="text-[11px] text-cyan-400 font-mono font-bold" id="probFilterVal">&ge; 50%</span>
+          </div>
+          <input 
+            type="range" 
+            id="probFilterSlider" 
+            min="0" 
+            max="95" 
+            value="50" 
+            step="5"
+            oninput="applyProbFilter(this.value)"
+            class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+          />
+          <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+            <span>All (0%)</span>
+            <span>Moderate (30%)</span>
+            <span>Critical (80%+)</span>
+          </div>
+        </div>
+
+        <!-- Susceptibility Legend -->
+        <div class="bg-[#0d1322] p-3 rounded-xl border border-dark-border space-y-1.5 text-[11px] font-mono">
+          <span class="font-bold text-slate-400 uppercase text-[10px] block mb-1">Susceptibility Classification</span>
+          <div class="grid grid-cols-2 gap-1 text-[10px]">
+            <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-red-500"></span> Very High (&gt;80%)</div>
+            <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-orange-500"></span> High (60-80%)</div>
+            <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-yellow-400"></span> Medium (30-60%)</div>
+            <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Low (&lt;30%)</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="pt-3 space-y-2">
+        <a 
+          href="ai_risk_engine.html" 
+          class="w-full bg-tactical-gold hover:bg-amber-400 text-slate-950 font-black text-xs py-2.5 rounded-lg text-center flex items-center justify-center gap-1.5 uppercase tracking-wider transition shadow-md shadow-amber-500/20"
+        >
+          <span class="material-symbols-outlined text-sm">psychology</span>
+          Launch AI Risk Engine &rarr;
+        </a>
+        <a 
+          href="digital_twin.html" 
+          class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs py-2 rounded-lg text-center flex items-center justify-center gap-1.5 transition"
+        >
+          <span class="material-symbols-outlined text-sm">3d_rotation</span>
+          Switch to 3D Digital Twin &rarr;
+        </a>
+      </div>
+    </aside>
+
+    <!-- ══ MAIN GIS MAP VIEWPORT ══ -->
+    <main class="flex-1 relative bg-[#05080e] overflow-hidden flex flex-col">
+      
+      <!-- Leaflet Map Container -->
+      <div id="map" class="flex-1"></div>
+
+      <!-- Map Overlay HUD Controls (Top-Right) -->
+      <div class="absolute top-4 right-4 z-[400] flex flex-col gap-2">
+        <div class="bg-[#090d16]/90 backdrop-blur-md border border-dark-border p-1 rounded-xl shadow-xl flex items-center gap-1">
+          <button 
+            onclick="setBaseMap('dark')" 
+            id="btnBaseDark"
+            class="px-2.5 py-1 text-xs font-mono font-bold rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 transition"
+          >
+            Tactical Dark
+          </button>
+          <button 
+            onclick="setBaseMap('satellite')" 
+            id="btnBaseSat"
+            class="px-2.5 py-1 text-xs font-mono font-bold rounded text-slate-400 hover:text-white transition"
+          >
+            Satellite FLIR
+          </button>
+          <button 
+            onclick="setBaseMap('topo')" 
+            id="btnBaseTopo"
+            class="px-2.5 py-1 text-xs font-mono font-bold rounded text-slate-400 hover:text-white transition"
+          >
+            Terrain DEM
+          </button>
+        </div>
+
+        <button 
+          onclick="map.setView([22.5, 82.0], 5)" 
+          class="bg-[#090d16]/90 backdrop-blur-md hover:bg-slate-800 text-slate-200 border border-dark-border p-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 shadow-lg transition self-end"
+          title="Reset Map Bounds"
+        >
+          <span class="material-symbols-outlined text-base text-cyan-400">crop_free</span>
+        </button>
+      </div>
+
+      <!-- Instruction floating badge -->
+      <div class="absolute top-4 left-4 z-[400] bg-[#090d16]/90 backdrop-blur-md border border-cyan-500/30 text-cyan-300 px-3 py-1.5 rounded-xl shadow-xl text-xs font-mono flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+        <span>Click ANYWHERE in India to run <b>Live AI Susceptibility Assessment</b></span>
+      </div>
+
+      <!-- Bottom Floating Telemetry Bar -->
+      <div class="h-10 bg-[#090d16]/95 backdrop-blur-md border-t border-dark-border px-4 flex items-center justify-between text-xs font-mono text-slate-400 z-[400]">
+        <div class="flex items-center gap-4">
+          <div class="flex items-center gap-1.5">
+            <span class="text-slate-500">CURSOR:</span>
+            <span id="telemetryCoords" class="text-cyan-300 font-bold">27.3389° N, 88.6065° E</span>
+          </div>
+          <div class="hidden sm:flex items-center gap-1.5">
+            <span class="text-slate-500">RENDERED PINS:</span>
+            <span id="telemetryPins" class="text-white font-bold">4,229</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-1.5 text-[11px]">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span class="text-slate-300">AI Inference: <b class="text-emerald-400">0ms Ready</b></span>
+          </div>
+          <button 
+            onclick="exportRiskDataset()" 
+            class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-0.5 rounded text-[11px] font-bold transition flex items-center gap-1"
+          >
+            <span class="material-symbols-outlined text-xs">download</span> Export GeoJSON
+          </button>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ══ SCRIPT: LEAFLET GIS MAP & AI INFERENCE CONTROLLER ══ -->
+  <script>
+    var map;
+    var currentBaseTile;
+    var baseTileLayers = {};
+    var heatmapLayer = null;
+    var criticalMarkerLayer = L.layerGroup();
+    var moderateMarkerLayer = L.layerGroup();
+    var sensorLayer = L.layerGroup();
+    var isobarsLayer = L.layerGroup();
+    var evacRoutesLayer = L.layerGroup();
+    var liveClickMarker = null;
+
+    var currentMinProb = 0.50;
+
+    // Initialize Map
+    function initMap() {
+      map = L.map('map', {
+        center: [23.5, 82.5],
+        zoom: 5,
+        minZoom: 4,
+        maxZoom: 16,
+        zoomControl: true
+      });
+
+      // Base tile layers (Esri Dark Canvas: 100% Free, No API Key, No Watermark)
+      baseTileLayers.dark = L.layerGroup([
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+          attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
+          maxZoom: 16
+        }),
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+          maxZoom: 16
+        })
+      ]);
+
+      baseTileLayers.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+        maxZoom: 18
+      });
+
+      baseTileLayers.topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+        attribution: 'Map data: &copy; OpenStreetMap, SRTM | Map style: &copy; OpenTopoMap (CC-BY-SA)',
+        maxZoom: 17
+      });
+
+      currentBaseTile = baseTileLayers.dark;
+      currentBaseTile.addTo(map);
+
+      // Track cursor coordinates
+      map.on('mousemove', function(e) {
+        document.getElementById('telemetryCoords').innerText = 
+          e.latlng.lat.toFixed(4) + '° N, ' + e.latlng.lng.toFixed(4) + '° E';
+      });
+
+      // Click anywhere to run AI assessment
+      map.on('click', function(e) {
+        handleMapClick(e.latlng.lat, e.latlng.lng);
+      });
+
+      // Populate layers
+      loadLandslideDataLayers();
+      loadSensorNodes();
+      loadEvacuationRoutes();
+      loadRainfallIsobars();
+
+      // Initial focus on high risk sector (Sikkim / Gangtok)
+      setTimeout(function() {
+        teleportTo('sikkim');
+      }, 800);
+    }
+
+    function updateSatelliteTileLayer() {
+      var mapboxKey = localStorage.getItem('MAPBOX_API_KEY');
+      if (mapboxKey) {
+        baseTileLayers.satellite = L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/{z}/{x}/{y}?access_token=' + mapboxKey, {
+          attribution: '&copy; Mapbox &copy; OpenStreetMap',
+          tileSize: 512,
+          zoomOffset: -1,
+          maxZoom: 19
+        });
+      } else {
+        baseTileLayers.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+          attribution: 'Tiles &copy; Esri',
+          maxZoom: 18
+        });
+      }
+    }
+
+    function setBaseMap(type) {
+      map.removeLayer(currentBaseTile);
+      if (type === 'dark') {
+        currentBaseTile = baseTileLayers.dark;
+      } else if (type === 'satellite') {
+        updateSatelliteTileLayer();
+        currentBaseTile = baseTileLayers.satellite;
+      } else if (type === 'topo') {
+        currentBaseTile = baseTileLayers.topo;
+      }
+      
+      currentBaseTile.addTo(map);
+
+      // Update button styling
+      ['btnBaseDark', 'btnBaseSat', 'btnBaseTopo'].forEach(id => {
+        var el = document.getElementById(id);
+        el.className = "px-2.5 py-1 text-xs font-mono font-bold rounded text-slate-400 hover:text-white transition";
+      });
+      var activeBtn = type === 'dark' ? 'btnBaseDark' : (type === 'satellite' ? 'btnBaseSat' : 'btnBaseTopo');
+      document.getElementById(activeBtn).className = "px-2.5 py-1 text-xs font-mono font-bold rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 transition";
+    }
+
+    // Load Landslide Heatmap & Markers from 8,532 dataset
+    function loadLandslideDataLayers() {
+      if (!window.PRITHVI_SHIELD_LANDSLIDE_DATA || window.PRITHVI_SHIELD_LANDSLIDE_DATA.length === 0) {
+        console.warn("Dataset not found in window.PRITHVI_SHIELD_LANDSLIDE_DATA");
+        return;
+      }
+
+      var data = window.PRITHVI_SHIELD_LANDSLIDE_DATA;
+      var heatPoints = [];
+      var criticalPoints = [];
+      var moderatePoints = [];
+
+      criticalMarkerLayer.clearLayers();
+      moderateMarkerLayer.clearLayers();
+
+      var renderedCount = 0;
+
+      // Sample density based on zoom for performance
+      for (var i = 0; i < data.length; i++) {
+        var p = data[i];
+        var lat = p[0];
+        var lon = p[1];
+        var elev = p[2];
+        var slope = p[3];
+        var rain = p[4];
+        var prob = p[5];
+        var risk = p[6];
+
+        // Heatmap entry: [lat, lon, intensity]
+        heatPoints.push([lat, lon, prob]);
+
+        if (prob >= currentMinProb) {
+          renderedCount++;
+          var color = prob >= 0.80 ? "#ef4444" : (prob >= 0.60 ? "#f97316" : (prob >= 0.30 ? "#eab308" : "#10b981"));
+          
+          var marker = L.circleMarker([lat, lon], {
+            radius: prob >= 0.80 ? 4.5 : 3.5,
+            color: color,
+            fillColor: color,
+            fillOpacity: 0.75,
+            weight: 1
+          });
+
+          var popupContent = `
+            <div style="font-family:'Inter',sans-serif;width:240px;padding:4px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #1e293b;padding-bottom:6px;margin-bottom:8px;">
+                <span style="font-size:12px;font-weight:800;color:#00e5ff;letter-spacing:0.5px;">⛰️ BHU-RAKSHA ML POINT</span>
+                <span style="font-size:10px;font-weight:700;background:${color}30;color:${color};border:1px solid ${color};padding:1px 6px;border-radius:4px;">${risk}</span>
+              </div>
+              <div style="font-size:11px;color:#cbd5e1;line-height:1.6;font-family:'JetBrains Mono',monospace;">
+                <div><b>COORDS:</b> ${lat.toFixed(4)}°, ${lon.toFixed(4)}°</div>
+                <div><b>PROBABILITY:</b> <b style="color:${color};font-size:13px;">${(prob * 100).toFixed(1)}%</b></div>
+                <div><b>ELEVATION:</b> ${elev} m</div>
+                <div><b>SLOPE ANGLE:</b> ${slope}°</div>
+                <div><b>ANNUAL RAIN:</b> ${rain} mm</div>
+              </div>
+              <div style="margin-top:10px;border-top:1px solid #1e293b;padding-top:6px;display:flex;gap:6px;">
+                <a href="ai_risk_engine.html?lat=${lat}&lon=${lon}&slope=${slope}&elev=${elev}&rain=${rain}" style="background:#00e5ff;color:#090d16;font-weight:800;font-size:10px;padding:5px 8px;border-radius:6px;text-align:center;text-decoration:none;flex:1;">
+                  ANALYZE IN ENGINE &rarr;
+                </a>
+              </div>
+            </div>
+          `;
+
+          marker.bindPopup(popupContent);
+
+          if (prob >= 0.60) {
+            criticalMarkerLayer.addLayer(marker);
+          } else {
+            moderateMarkerLayer.addLayer(marker);
+          }
+        }
+      }
+
+      // Create / update heatmap layer
+      if (heatmapLayer) map.removeLayer(heatmapLayer);
+      
+      heatmapLayer = L.heatLayer(heatPoints, {
+        radius: 20,
+        blur: 24,
+        maxZoom: 10,
+        max: 1.0,
+        minOpacity: 0.35,
+        gradient: {
+          0.20: "#10b981", // green
+          0.40: "#eab308", // yellow
+          0.60: "#f97316", // orange
+          0.80: "#ef4444", // red
+          1.00: "#881337"  // dark red
+        }
+      });
+
+      if (document.getElementById('layerHeatmap').checked) heatmapLayer.addTo(map);
+      if (document.getElementById('layerCriticalMarkers').checked) criticalMarkerLayer.addTo(map);
+      if (document.getElementById('layerModerateMarkers').checked) moderateMarkerLayer.addTo(map);
+
+      document.getElementById('telemetryPins').innerText = renderedCount.toLocaleString();
+    }
+
+    // Handle Map Click: Run Real-time AI inference & query FastAPI /analyze-location
+    async function handleMapClick(lat, lon) {
+      if (lat < 6 || lat > 38 || lon < 66 || lon > 99) {
+        alert("Selected point is outside India's geographic bounding box.");
+        return;
+      }
+
+      var nearest = window.findNearestLandslidePoint ? window.findNearestLandslidePoint(lat, lon) : null;
+
+      if (liveClickMarker) map.removeLayer(liveClickMarker);
+
+      var pinIcon = L.divIcon({
+        className: 'custom-ai-pin',
+        html: `<div style="width:20px;height:20px;border-radius:50%;background:#00e5ff;border:2px solid white;box-shadow:0 0 12px #00e5ff;animation:pulse-animation 1.5s infinite;"></div>`,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+      });
+
+      liveClickMarker = L.marker([lat, lon], { icon: pinIcon }).addTo(map);
+
+      // Show temporary loading popup
+      var loadingHtml = `
+        <div style="font-family:'Inter',sans-serif;width:240px;padding:8px;text-align:center;">
+          <div style="font-size:12px;font-weight:800;color:#00e5ff;margin-bottom:6px;">🛰️ CONTACTING FASTAPI BACKEND...</div>
+          <div style="font-size:11px;color:#94a3b8;font-family:'JetBrains Mono',monospace;">Querying GEE + Satellite + XGBoost + Physics for [${lat.toFixed(4)}°, ${lon.toFixed(4)}°]...</div>
+        </div>
+      `;
+      liveClickMarker.bindPopup(loadingHtml).openPopup();
+
+      try {
+        var data = await window.PrithviShieldAPI.analyzeLocation(lat, lon);
+        var env = data.environmental_data || {};
+        var phys = data.physics || {};
+        var xg = data.xgboost || {};
+        var sat = data.satellite || {};
+        var fin = data.final_assessment || {};
+
+        var risk = (fin.risk_level || xg.risk_level || "LOW").toUpperCase();
+        var riskColor = risk.includes("HIGH") || risk.includes("CRITICAL") ? "#ef4444" : (risk.includes("MEDIUM") ? "#f59e0b" : "#10b981");
+
+        var popupHtml = `
+          <div style="font-family:'Inter',sans-serif;width:280px;padding:6px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #1e293b;padding-bottom:6px;margin-bottom:8px;">
+              <span style="font-size:12px;font-weight:900;color:#00e5ff;letter-spacing:0.5px;">🛰️ FASTAPI LIVE ANALYSIS</span>
+              <span style="font-size:10px;font-weight:800;background:${riskColor}30;color:${riskColor};border:1px solid ${riskColor};padding:2px 6px;border-radius:4px;">${risk}</span>
+            </div>
+            <div style="font-size:11px;color:#cbd5e1;line-height:1.7;font-family:'JetBrains Mono',monospace;">
+              <div><b>COORDS:</b> ${lat.toFixed(4)}° N, ${lon.toFixed(4)}° E</div>
+              <div><b>XGBOOST PROB:</b> <b style="color:${riskColor};font-size:13px;">${xg.landslide_probability || 0.0}%</b></div>
+              <div><b>FACTOR OF SAFETY:</b> <b style="color:${(phys.factor_of_safety||3)<1.3?'#ef4444':'#10b981'}">${phys.factor_of_safety !== undefined ? phys.factor_of_safety : 'N/A'}</b> (${phys.stability||'STABLE'})</div>
+              <div><b>ELEVATION / SLOPE:</b> ${env.elevation_m || 0} m &bull; ${env.slope_deg || 0}°</div>
+              <div><b>RAINFALL (24h/72h):</b> ${env.rainfall_24h || 0} / ${env.rainfall_72h || 0} mm</div>
+              <div><b>SOIL MOISTURE:</b> ${env.soil_moisture || 'N/A'} &bull; <b>NDVI:</b> ${env.ndvi || 'N/A'}</div>
+              <div><b>SATELLITE DATE:</b> ${sat.image_date || 'N/A'} (Cloud: ${sat.cloud_percentage || 0}%)</div>
+            </div>
+            <div style="margin-top:8px;padding:6px;background:#070a12;border-radius:6px;border:1px solid #1e293b;font-size:10px;color:#94a3b8;">
+              <b style="color:#f59e0b;">ASSESSMENT:</b> ${fin.reason || 'Analysis complete.'}
+            </div>
+            <div style="margin-top:8px;display:flex;gap:6px;">
+              <a href="ai_risk_engine.html?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}" style="background:#00e5ff;color:#090d16;font-weight:800;font-size:10px;padding:6px;border-radius:6px;text-align:center;text-decoration:none;flex:1;">
+                OPEN IN FULL AI DASHBOARD &rarr;
+              </a>
+            </div>
+          </div>
+        `;
+        liveClickMarker.setPopupContent(popupHtml);
+
+      } catch (err) {
+        var fallbackHtml = `
+          <div style="font-family:'Inter',sans-serif;width:250px;padding:6px;">
+            <div style="font-size:12px;font-weight:800;color:#ef4444;margin-bottom:4px;">⚠️ BACKEND ERROR</div>
+            <div style="font-size:11px;color:#cbd5e1;line-height:1.5;">Unable to connect to landslide analysis server (POST /analyze-location).</div>
+            <div style="margin-top:6px;font-size:10px;color:#64748b;font-family:'JetBrains Mono',monospace;">Make sure FastAPI backend is active at http://127.0.0.1:8000</div>
+          </div>
+        `;
+        liveClickMarker.setPopupContent(fallbackHtml);
+      }
+    }
+
+    // IoT Sensor Nodes Layer
+    function loadSensorNodes() {
+      var sensors = [
+        { name: "Node-Sikkim-01 (Gangtok Ridge)", lat: 27.3389, lon: 88.6065, pore: "48 kPa", strain: "0.82 mm/h", status: "CRITICAL" },
+        { name: "Node-Wayanad-04 (Meppadi Slope)", lat: 11.5542, lon: 76.1264, pore: "54 kPa", strain: "1.14 mm/h", status: "CRITICAL" },
+        { name: "Node-Joshimath-02 (Helang Valley)", lat: 30.5564, lon: 79.5662, pore: "38 kPa", strain: "0.45 mm/h", status: "HIGH WATCH" },
+        { name: "Node-Shillong-03 (Mawkdok Crest)", lat: 25.5788, lon: 91.8933, pore: "42 kPa", strain: "0.62 mm/h", status: "HIGH WATCH" },
+        { name: "Node-Mandi-05 (Beas Gorge)", lat: 31.7082, lon: 76.9318, pore: "28 kPa", strain: "0.18 mm/h", status: "NORMAL" },
+        { name: "Node-Mahabaleshwar-07 (Pratapgad)", lat: 17.9237, lon: 73.6586, pore: "46 kPa", strain: "0.78 mm/h", status: "HIGH WATCH" },
+        { name: "Node-Darjeeling-09 (Lebong Ridge)", lat: 27.0410, lon: 88.2663, pore: "49 kPa", strain: "0.91 mm/h", status: "CRITICAL" },
+        { name: "Node-Champhai-11 (Mizoram Escarpment)", lat: 23.4735, lon: 93.3283, pore: "36 kPa", strain: "0.38 mm/h", status: "NORMAL" }
+      ];
+
+      sensorLayer.clearLayers();
+      sensors.forEach(s => {
+        var isCrit = s.status === "CRITICAL";
+        var color = isCrit ? "#ef4444" : (s.status === "HIGH WATCH" ? "#f59e0b" : "#10b981");
+        
+        var icon = L.divIcon({
+          className: 'sensor-icon',
+          html: `<div style="background:#090d16;border:2px solid ${color};color:${color};width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;box-shadow:0 0 10px ${color}60;">📡</div>`,
+          iconSize: [24, 24]
+        });
+
+        var marker = L.marker([s.lat, s.lon], { icon: icon });
+        var popup = `
+          <div style="font-family:'Inter',sans-serif;width:220px;padding:4px;">
+            <div style="font-size:11px;font-weight:800;color:#00e5ff;">📡 IOT TELEMETRY NODE</div>
+            <div style="font-size:12px;font-weight:700;color:white;margin:3px 0;">${s.name}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#cbd5e1;line-height:1.6;margin-top:6px;">
+              <div>STATUS: <b style="color:${color}">${s.status}</b></div>
+              <div>PORE PRESSURE: <b>${s.pore}</b></div>
+              <div>DISPLACEMENT: <b>${s.strain}</b></div>
+            </div>
+          </div>
+        `;
+        marker.bindPopup(popup);
+        sensorLayer.addLayer(marker);
+      });
+
+      if (document.getElementById('layerSensors').checked) sensorLayer.addTo(map);
+    }
+
+    // Evacuation Routes & National Highway Corridors
+    function loadEvacuationRoutes() {
+      evacRoutesLayer.clearLayers();
+      
+      // NH-10 Sikkim Corridor
+      var nh10 = [[26.7271, 88.4312], [26.9022, 88.4891], [27.1356, 88.5267], [27.3389, 88.6065]];
+      var nh10Line = L.polyline(nh10, { color: '#a855f7', weight: 4, opacity: 0.85, dashArray: '6, 6' });
+      nh10Line.bindPopup("<b>🛣️ NH-10 Corridor (Siliguri - Gangtok)</b><br>Primary Disaster Evacuation & Supply Route");
+      evacRoutesLayer.addLayer(nh10Line);
+
+      // NH-66 Western Ghats Corridor
+      var nh66 = [[11.2588, 75.7804], [11.5542, 76.1264], [11.8745, 75.3704]];
+      var nh66Line = L.polyline(nh66, { color: '#a855f7', weight: 4, opacity: 0.85, dashArray: '6, 6' });
+      nh66Line.bindPopup("<b>🛣️ Wayanad Ghat Route (NH-766 / Thamarassery Churam)</b><br>High-Vulnerability Monsoon Route");
+      evacRoutesLayer.addLayer(nh66Line);
+
+      // NH-7 Badrinath / Joshimath Corridor
+      var nh7 = [[30.1456, 78.7823], [30.2845, 79.2245], [30.5564, 79.5662]];
+      var nh7Line = L.polyline(nh7, { color: '#a855f7', weight: 4, opacity: 0.85, dashArray: '6, 6' });
+      nh7Line.bindPopup("<b>🛣️ NH-07 Alaknanda Corridor (Rishikesh - Joshimath)</b><br>Critical Himalayan Highway Route");
+      evacRoutesLayer.addLayer(nh7Line);
+
+      if (document.getElementById('layerEvacRoutes').checked) evacRoutesLayer.addTo(map);
+    }
+
+    // Rainfall Isohyet Isobars (Simulated contour bounds)
+    function loadRainfallIsobars() {
+      isobarsLayer.clearLayers();
+      var circles = [
+        { center: [27.3, 88.6], radius: 65000, label: "Eastern Himalayas 24h Rain: 185 mm" },
+        { center: [11.6, 76.1], radius: 55000, label: "Wayanad / Nilgiris 24h Rain: 210 mm" },
+        { center: [25.5, 91.8], radius: 70000, label: "Khasi Hills / Cherrapunji 24h Rain: 260 mm" }
+      ];
+
+      circles.forEach(c => {
+        var circle = L.circle(c.center, {
+          radius: c.radius,
+          color: '#00e5ff',
+          fillColor: '#00e5ff',
+          fillOpacity: 0.12,
+          weight: 1.5,
+          dashArray: '4, 4'
+        });
+        circle.bindPopup(`<b>🌧️ IMD Isohyet Alert Band</b><br>${c.label}`);
+        isobarsLayer.addLayer(circle);
+      });
+    }
+
+    // Layer Update Controller
+    function updateLayers() {
+      if (document.getElementById('layerHeatmap').checked) {
+        if (!map.hasLayer(heatmapLayer) && heatmapLayer) map.addLayer(heatmapLayer);
+      } else {
+        if (map.hasLayer(heatmapLayer)) map.removeLayer(heatmapLayer);
+      }
+
+      if (document.getElementById('layerCriticalMarkers').checked) {
+        if (!map.hasLayer(criticalMarkerLayer)) map.addLayer(criticalMarkerLayer);
+      } else {
+        if (map.hasLayer(criticalMarkerLayer)) map.removeLayer(criticalMarkerLayer);
+      }
+
+      if (document.getElementById('layerModerateMarkers').checked) {
+        if (!map.hasLayer(moderateMarkerLayer)) map.addLayer(moderateMarkerLayer);
+      } else {
+        if (map.hasLayer(moderateMarkerLayer)) map.removeLayer(moderateMarkerLayer);
+      }
+
+      if (document.getElementById('layerSensors').checked) {
+        if (!map.hasLayer(sensorLayer)) map.addLayer(sensorLayer);
+      } else {
+        if (map.hasLayer(sensorLayer)) map.removeLayer(sensorLayer);
+      }
+
+      if (document.getElementById('layerIsobars').checked) {
+        if (!map.hasLayer(isobarsLayer)) map.addLayer(isobarsLayer);
+      } else {
+        if (map.hasLayer(isobarsLayer)) map.removeLayer(isobarsLayer);
+      }
+
+      if (document.getElementById('layerEvacRoutes').checked) {
+        if (!map.hasLayer(evacRoutesLayer)) map.addLayer(evacRoutesLayer);
+      } else {
+        if (map.hasLayer(evacRoutesLayer)) map.removeLayer(evacRoutesLayer);
+      }
+    }
+
+    function toggleAllLayers() {
+      var anyChecked = document.getElementById('layerHeatmap').checked;
+      var newVal = !anyChecked;
+      ['layerHeatmap', 'layerCriticalMarkers', 'layerModerateMarkers', 'layerSensors', 'layerIsobars', 'layerEvacRoutes'].forEach(id => {
+        document.getElementById(id).checked = newVal;
+      });
+      updateLayers();
+    }
+
+    function applyProbFilter(val) {
+      currentMinProb = parseFloat(val) / 100;
+      document.getElementById('probFilterVal').innerText = "≥ " + val + "%";
+      loadLandslideDataLayers();
+    }
+
+    // Teleport to region
+    function teleportTo(region) {
+      if (region === 'india') {
+        map.flyTo([22.5, 82.5], 5, { duration: 1.2 });
+      } else if (region === 'wayanad') {
+        map.flyTo([11.6854, 76.1320], 11, { duration: 1.5 });
+        handleMapClick(11.6854, 76.1320);
+      } else if (region === 'sikkim') {
+        map.flyTo([27.3389, 88.6065], 11, { duration: 1.5 });
+        handleMapClick(27.3389, 88.6065);
+      } else if (region === 'joshimath') {
+        map.flyTo([30.5564, 79.5662], 11, { duration: 1.5 });
+        handleMapClick(30.5564, 79.5662);
+      } else if (region === 'shillong') {
+        map.flyTo([25.5788, 91.8933], 11, { duration: 1.5 });
+        handleMapClick(25.5788, 91.8933);
+      } else if (region === 'shimla') {
+        map.flyTo([31.1048, 77.1734], 11, { duration: 1.5 });
+        handleMapClick(31.1048, 77.1734);
+      }
+    }
+
+    // Tactical Target Marker Reference
+    var searchMarker = null;
+
+    // Navigate to Latitude & Longitude with tactical beacon
+    function goToCoordinates(lat, lon, label) {
+      if (isNaN(lat) || isNaN(lon)) {
+        alert("Invalid coordinates. Please enter valid numbers.");
+        return;
+      }
+      
+      // Auto-flip if entered backwards (e.g. Longitude first for India: Long > 60, Lat < 40)
+      if (lat > 60 && lon <= 40) {
+        var temp = lat;
+        lat = lon;
+        lon = temp;
+      }
+
+      if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+        alert("Coordinates out of bounds! Latitude [-90 to 90], Longitude [-180 to 180].");
+        return;
+      }
+
+      // Sync sidebar inputs
+      var latEl = document.getElementById('sidebarLatInput');
+      var lngEl = document.getElementById('sidebarLngInput');
+      if (latEl) latEl.value = lat.toFixed(4);
+      if (lngEl) lngEl.value = lon.toFixed(4);
+
+      // Smooth camera fly
+      map.flyTo([lat, lon], 12, { duration: 1.5 });
+
+      // Place or move tactical target beacon
+      if (searchMarker) {
+        map.removeLayer(searchMarker);
+      }
+
+      var beaconHtml = `
+        <div class="relative flex items-center justify-center">
+          <span class="absolute w-8 h-8 rounded-full bg-cyan-400/40 animate-ping"></span>
+          <span class="relative w-4 h-4 rounded-full bg-cyan-400 border-2 border-white shadow-lg shadow-cyan-400/80"></span>
+        </div>
+      `;
+      var beaconIcon = L.divIcon({
+        html: beaconHtml,
+        className: 'custom-beacon-icon',
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
+      });
+
+      searchMarker = L.marker([lat, lon], { icon: beaconIcon }).addTo(map);
+      searchMarker.bindPopup(`
+        <div class="p-1 font-mono text-xs text-slate-100">
+          <div class="font-bold text-cyan-300">${label || 'Target Location'}</div>
+          <div class="text-[10px] text-slate-400">${lat.toFixed(4)}° N, ${lon.toFixed(4)}° E</div>
+          <div class="text-[10px] text-amber-300 mt-1">Analyzing AI Landslide Risk...</div>
+        </div>
+      `).openPopup();
+
+      // Trigger FastAPI AI risk assessment
+      handleMapClick(lat, lon);
+    }
+
+    // Manual Search from Sidebar Lat/Long Inputs
+    function manualLatLonSearch() {
+      var latVal = parseFloat(document.getElementById('sidebarLatInput').value);
+      var lngVal = parseFloat(document.getElementById('sidebarLngInput').value);
+      if (isNaN(latVal) || isNaN(lngVal)) {
+        alert("Please enter valid Latitude and Longitude values.");
+        return;
+      }
+      goToCoordinates(latVal, lngVal, "Manual Coordinate Target");
+    }
+
+    // Comprehensive Omni Search (Coordinates & Place Names)
+    async function searchLocation() {
+      var query = document.getElementById('coordSearchInput').value.trim();
+      if (!query) return;
+
+      // 1. Try flexible Coordinate Regex (e.g. "27.3389, 88.6065", "27.3389 88.6065", "lat: 27.33, lon: 88.60", "27.33N 88.60E")
+      var coordRegex = /([+-]?\d+(?:\.\d+)?)\s*(?:,\s*|\s+)\s*([+-]?\d+(?:\.\d+)?)/;
+      var match = query.match(coordRegex);
+      if (match) {
+        var p1 = parseFloat(match[1]);
+        var p2 = parseFloat(match[2]);
+        goToCoordinates(p1, p2, `GPS: ${p1.toFixed(4)}, ${p2.toFixed(4)}`);
+        return;
+      }
+
+      // 2. City / Region Presets
+      var lower = query.toLowerCase();
+      var presets = {
+        "gangtok": [27.3389, 88.6065, "Gangtok, Sikkim"],
+        "sikkim": [27.3389, 88.6065, "Sikkim"],
+        "wayanad": [11.6854, 76.1320, "Wayanad, Kerala"],
+        "kerala": [11.6854, 76.1320, "Wayanad, Kerala"],
+        "joshimath": [30.5564, 79.5662, "Joshimath, Uttarakhand"],
+        "chamoli": [30.5564, 79.5662, "Chamoli, Uttarakhand"],
+        "uttarakhand": [30.5564, 79.5662, "Joshimath, Uttarakhand"],
+        "shillong": [25.5788, 91.8933, "Shillong, Meghalaya"],
+        "meghalaya": [25.5788, 91.8933, "Meghalaya"],
+        "shimla": [31.1048, 77.1734, "Shimla, Himachal Pradesh"],
+        "himachal": [31.1048, 77.1734, "Himachal Pradesh"],
+        "guwahati": [26.1445, 91.7362, "Guwahati, Assam"],
+        "dispur": [26.1433, 91.7898, "Dispur, Assam"],
+        "assam": [26.1445, 91.7362, "Guwahati, Assam"],
+        "darjeeling": [27.0410, 88.2663, "Darjeeling, West Bengal"],
+        "itanagar": [27.0844, 93.6053, "Itanagar, Arunachal Pradesh"],
+        "dehradun": [30.3165, 78.0322, "Dehradun, Uttarakhand"],
+        "kullu": [31.9579, 77.1095, "Kullu, Himachal Pradesh"],
+        "manali": [32.2396, 77.1887, "Manali, Himachal Pradesh"],
+        "mandi": [31.7087, 76.9320, "Mandi, Himachal Pradesh"],
+        "munnar": [10.0889, 77.0595, "Munnar, Kerala"],
+        "aizawl": [23.7271, 92.7176, "Aizawl, Mizoram"],
+        "kohima": [25.6751, 94.1086, "Kohima, Nagaland"],
+        "imphal": [24.8170, 93.9368, "Imphal, Manipur"],
+        "agartala": [23.8315, 91.2868, "Agartala, Tripura"]
+      };
+
+      for (var key in presets) {
+        if (lower.includes(key)) {
+          var p = presets[key];
+          goToCoordinates(p[0], p[1], p[2]);
+          return;
+        }
+      }
+
+      // 3. Online Geocoding with OpenStreetMap Nominatim
+      try {
+        var res = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(query)}`);
+        var data = await res.json();
+        if (data && data.length > 0) {
+          var lat = parseFloat(data[0].lat);
+          var lon = parseFloat(data[0].lon);
+          goToCoordinates(lat, lon, data[0].display_name.split(',')[0]);
+          return;
+        }
+      } catch (err) {
+        console.warn("Geocoding service unavailable:", err);
+      }
+
+      alert("Location '" + query + "' not found. Try coordinates (e.g. 27.33, 88.60) or major cities.");
+    }
+
+    // Export GeoJSON
+    function exportRiskDataset() {
+      if (!window.PRITHVI_SHIELD_LANDSLIDE_DATA) return;
+      var geojson = {
+        type: "FeatureCollection",
+        features: window.PRITHVI_SHIELD_LANDSLIDE_DATA.slice(0, 1000).map(p => ({
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [p[1], p[0]] },
+          properties: { elevation: p[2], slope: p[3], rainfall: p[4], probability: p[5], risk: p[6] }
+        }))
+      };
+      var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(geojson, null, 2));
+      var downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", "india_landslide_risk_sample.geojson");
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+
+    // Boot
+    window.addEventListener('DOMContentLoaded', function() {
+      initMap();
+      updateApiKeyUI();
+    });
+
+    // ══ API KEY & BACKEND CONFIG MODAL FUNCTIONS ══
+    function openApiKeyModal() {
+      document.getElementById('modalApiUrlInput').value = window.getApiBaseUrl();
+      document.getElementById('modalApiKeyInput').value = window.getApiKey();
+      document.getElementById('modalMapboxKeyInput').value = localStorage.getItem('MAPBOX_API_KEY') || '';
+      document.getElementById('modalTestResult').innerText = '';
+      document.getElementById('modalTestResult').className = 'hidden text-xs font-mono p-2.5 rounded-lg';
+      document.getElementById('apiKeyModal').classList.remove('hidden');
+    }
+
+    function closeApiKeyModal() {
+      document.getElementById('apiKeyModal').classList.add('hidden');
+    }
+
+    function saveApiKeySettings() {
+      var newUrl = document.getElementById('modalApiUrlInput').value.trim();
+      var newKey = document.getElementById('modalApiKeyInput').value.trim();
+      var mapboxKey = document.getElementById('modalMapboxKeyInput').value.trim();
+
+      window.setApiBaseUrl(newUrl);
+      window.setApiKey(newKey);
+      if (mapboxKey) {
+        localStorage.setItem('MAPBOX_API_KEY', mapboxKey);
+      } else {
+        localStorage.removeItem('MAPBOX_API_KEY');
+      }
+
+      updateApiKeyUI();
+      closeApiKeyModal();
+      alert("✅ API Key & Backend settings saved successfully!");
+    }
+
+    async function testApiKeyConnection() {
+      var newUrl = document.getElementById('modalApiUrlInput').value.trim();
+      var newKey = document.getElementById('modalApiKeyInput').value.trim();
+      
+      // Temporarily set
+      window.setApiBaseUrl(newUrl);
+      window.setApiKey(newKey);
+
+      var resultBox = document.getElementById('modalTestResult');
+      resultBox.classList.remove('hidden');
+      resultBox.innerText = 'Testing connection to ' + newUrl + '...';
+      resultBox.className = 'text-xs font-mono p-2.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-300';
+
+      var health = await window.PrithviShieldAPI.checkHealth();
+      if (health.connected) {
+        resultBox.innerText = '✅ SUCCESS: Connected to ' + health.baseUrl + ' (' + (health.data.system || 'PRITHVI-SHIELD') + ')';
+        resultBox.className = 'text-xs font-mono p-2.5 rounded-lg bg-emerald-950/80 border border-emerald-600 text-emerald-300';
+      } else {
+        resultBox.innerText = '❌ ERROR: ' + health.error;
+        resultBox.className = 'text-xs font-mono p-2.5 rounded-lg bg-red-950/80 border border-red-600 text-red-300';
+      }
+    }
+
+    function updateApiKeyUI() {
+      var key = window.getApiKey();
+      var url = window.getApiBaseUrl();
+      var keyText = document.getElementById('apiKeyStatusText');
+      var sideBadge = document.getElementById('sidebarApiBadge');
+      var sideHost = document.getElementById('sidebarApiHost');
+      var sideKey = document.getElementById('sidebarKeyStatus');
+
+      if (keyText) keyText.innerText = key ? 'Key: Active' : 'API Key';
+      if (sideHost) sideHost.innerText = url.replace(/^https?:\/\//, '');
+      if (sideKey) sideKey.innerText = key ? (key.substring(0, 6) + '...') : 'Unset (Public)';
+      if (sideBadge) {
+        sideBadge.innerText = key ? 'KEY SET' : 'READY';
+        sideBadge.className = key ? 
+          'text-[9px] bg-cyan-950 text-cyan-300 border border-cyan-800 px-1.5 py-0.5 rounded font-mono font-bold' : 
+          'text-[9px] bg-emerald-950 text-emerald-300 border border-emerald-800 px-1.5 py-0.5 rounded font-mono font-bold';
+      }
+    }
+  </script>
+
+  <!-- ══ API KEY & BACKEND CONFIGURATION MODAL ══ -->
+  <div id="apiKeyModal" class="hidden fixed inset-0 z-[1000] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-[#0d1322] border-2 border-cyan-500/50 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 glow-cyan">
+      
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-cyan-400 text-xl">vpn_key</span>
+          <h3 class="text-base font-bold text-white">GIS Map &amp; API Key Settings</h3>
+        </div>
+        <button onclick="closeApiKeyModal()" class="text-slate-400 hover:text-white text-lg font-bold">&times;</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">FastAPI Backend URL</label>
+          <input 
+            type="text" 
+            id="modalApiUrlInput" 
+            placeholder="http://127.0.0.1:8000 or https://api.yourdomain.com" 
+            class="w-full bg-[#070a12] border border-slate-700 focus:border-cyan-400 rounded-lg p-2 font-mono text-cyan-300 outline-none"
+          />
+          <span class="text-[10px] text-slate-500 mt-0.5 block">Endpoint that handles POST /analyze-location</span>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">FastAPI API Key / Authorization Token</label>
+          <input 
+            type="password" 
+            id="modalApiKeyInput" 
+            placeholder="Enter your API Key (optional)" 
+            class="w-full bg-[#070a12] border border-slate-700 focus:border-cyan-400 rounded-lg p-2 font-mono text-emerald-300 outline-none"
+          />
+          <span class="text-[10px] text-slate-500 mt-0.5 block">Sent in headers as <code>X-API-Key</code> and <code>Authorization: Bearer</code></span>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Custom Mapbox / Tile Layer API Key (Optional)</label>
+          <input 
+            type="password" 
+            id="modalMapboxKeyInput" 
+            placeholder="pk.eyJ1Ijo..." 
+            class="w-full bg-[#070a12] border border-slate-700 focus:border-cyan-400 rounded-lg p-2 font-mono text-purple-300 outline-none"
+          />
+          <span class="text-[10px] text-slate-500 mt-0.5 block">For custom high-resolution satellite tiles</span>
+        </div>
+
+        <div id="modalTestResult" class="hidden text-xs font-mono p-2.5 rounded-lg"></div>
+      </div>
+
+      <div class="flex justify-between items-center pt-2 border-t border-slate-800">
+        <button 
+          onclick="testApiKeyConnection()" 
+          class="bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 font-mono text-xs px-3 py-2 rounded-lg transition flex items-center gap-1"
+        >
+          <span class="material-symbols-outlined text-xs">network_check</span> Test Connection
+        </button>
+
+        <div class="flex gap-2">
+          <button 
+            onclick="closeApiKeyModal()" 
+            class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-3 py-2 rounded-lg transition"
+          >
+            Cancel
+          </button>
+          <button 
+            onclick="saveApiKeySettings()" 
+            class="bg-tactical-cyan hover:bg-cyan-300 text-slate-950 font-black text-xs px-4 py-2 rounded-lg transition shadow-lg shadow-cyan-500/20"
+          >
+            Save Key
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Central SOS Emergency Handler -->
+  <script src="assets/js/sos_handler.js"></script>
+</body>
+</html>

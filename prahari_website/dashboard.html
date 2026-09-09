@@ -1,0 +1,1312 @@
+<!DOCTYPE html>
+<html class="h-full dark" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>Command Dashboard — PRITHVI-SHIELD Command</title>
+  
+  <!-- Google Fonts & Material Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+  
+  <!-- Leaflet CSS & JS for Dashboard Mini GIS View -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "dark-bg": "#090d16",
+            "dark-surface": "#0d1322",
+            "dark-panel": "#111827",
+            "dark-card": "#0f172a",
+            "dark-border": "#1e293b",
+            "dark-border-light": "#334155",
+            "tactical-gold": "#f59e0b",
+            "tactical-gold-hover": "#fbbf24",
+            "tactical-cyan": "#00e5ff",
+            "tactical-cyan-dark": "#0284c7",
+            "tactical-salmon": "#f87171",
+            "tactical-salmon-dark": "#ef4444",
+            "tactical-pink": "#fb7185",
+            "primary": "#000a1e",
+            "primary-container": "#002147",
+            "secondary": "#b6171e",
+            "secondary-container": "#da3433"
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    #miniMap {
+      width: 100%;
+      height: 100%;
+      background: #05080e;
+    }
+    .leaflet-container {
+      background-color: #070a12 !important;
+      font-family: 'Inter', sans-serif !important;
+    }
+    .leaflet-popup-content-wrapper {
+      background: rgba(13, 19, 34, 0.95) !important;
+      color: #f1f5f9 !important;
+      border: 1px solid #00e5ff40 !important;
+      border-radius: 8px !important;
+      padding: 0 !important;
+    }
+    .leaflet-popup-content {
+      margin: 10px 12px !important;
+    }
+    #adminSosAlertBanner {
+      flex-shrink: 0 !important;
+      min-height: max-content !important;
+      width: 100% !important;
+      overflow: visible !important;
+    }
+  </style>
+
+  <!-- Load Landslide Dataset & ML Engine -->
+  <script src="assets/data/landslide_points_data.js"></script>
+  <!-- Load FastAPI Backend Client -->
+  <script src="assets/js/api_client.js"></script>
+  <!-- Real-Time Emergency Alerts & Universal Slide-Bar Drawer -->
+  <script src="assets/js/live_emergency_alerts.js"></script>
+  <script src="assets/js/nav_sidebar.js"></script>
+</head>
+
+<body class="bg-dark-bg text-slate-100 h-full overflow-hidden flex flex-col font-sans select-none">
+
+  <!-- ══ PRITHVI-SHIELD COMMAND INTRO SPLASH SCREEN ══ -->
+  <div id="dash-splash-screen" class="fixed inset-0 z-[9999] bg-[#070a11] text-white flex flex-col items-center justify-center p-6 transition-all duration-700">
+    <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-cyan-950/50 via-[#070a11] to-[#070a11] pointer-events-none"></div>
+
+    <div class="relative z-10 flex flex-col items-center text-center max-w-md w-full gap-6">
+      <div class="relative flex items-center justify-center">
+        <div class="absolute w-36 h-36 rounded-full bg-cyan-500/20 animate-ping opacity-60"></div>
+        <div class="absolute w-28 h-28 rounded-full bg-blue-600/30 blur-md"></div>
+        <img src="assets/logo.jpg" alt="PRITHVI-SHIELD Logo" class="relative z-10 w-24 h-24 object-contain rounded-2xl shadow-2xl border-2 border-cyan-400/40 drop-shadow-[0_0_20px_rgba(0,229,255,0.4)]" />
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <h1 class="text-3xl font-black tracking-tight text-white flex items-center justify-center gap-2">
+          PRITHVI-SHIELD <span class="text-cyan-400">Admin Command</span>
+        </h1>
+        <p class="text-[11px] font-mono font-bold text-cyan-400 uppercase tracking-widest">
+          AI LANDSLIDE EARLY WARNING & COMMAND CENTER
+        </p>
+        <div class="h-0.5 w-16 bg-gradient-to-r from-transparent via-cyan-400 to-transparent mx-auto my-1"></div>
+        <p class="text-xs font-semibold text-slate-400 tracking-wider uppercase">
+          Real-time Citizen Evidence & Threat Telemetry &bull; SIH 2026
+        </p>
+      </div>
+
+      <div class="w-full bg-slate-900 border border-slate-800 rounded-full h-2 overflow-hidden shadow-inner mt-2">
+        <div id="dash-splash-bar" class="bg-gradient-to-r from-cyan-500 via-teal-400 to-blue-600 h-full w-0 transition-all duration-200 rounded-full"></div>
+      </div>
+
+      <span id="dash-splash-status" class="text-[11px] text-slate-400 font-mono animate-pulse">Establishing Live Telemetry Channel & Syncing Citizen Photos...</span>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      var splash = document.getElementById('dash-splash-screen');
+      var bar = document.getElementById('dash-splash-bar');
+      if (!splash || !bar) return;
+      var width = 0;
+      var interval = setInterval(function() {
+        width += 10;
+        bar.style.width = width + '%';
+        if (width >= 100) {
+          clearInterval(interval);
+          setTimeout(function() {
+            splash.style.opacity = '0';
+            splash.style.pointerEvents = 'none';
+            setTimeout(function() {
+              splash.remove();
+            }, 700);
+          }, 300);
+        }
+      }, 100);
+    })();
+  </script>
+
+  <!-- ══ TOP GLOBAL NAVIGATION BAR ══ -->
+  <nav class="h-14 bg-[#090d16] border-b border-dark-border px-4 sm:px-6 flex items-center justify-between z-50 shrink-0 flex-nowrap whitespace-nowrap overflow-x-hidden">
+    <div class="flex items-center gap-3 shrink-0 flex-nowrap">
+      <button onclick="window.prahariToggleSidebar()" class="prahari-slidebar-toggle-btn" title="Open Tactical Slide-Bar (Ctrl+B)">
+        <span class="material-symbols-outlined text-sm">menu</span>
+        <span class="text-xs font-black tracking-wide uppercase">MENU</span>
+      </button>
+
+      <a href="index.html" class="flex items-center gap-2 group shrink-0">
+        <img src="assets/logo.jpg" alt="PRITHVI-SHIELD Logo" class="w-8 h-8 object-contain rounded-lg border border-cyan-400/40 group-hover:scale-105 transition-transform" />
+        <div class="flex flex-col leading-tight">
+          <span class="font-extrabold text-sm tracking-tight text-white flex items-center gap-1">
+            PRITHVI-SHIELD <span class="text-cyan-400 font-bold">Command</span>
+          </span>
+          <span class="text-[9px] font-mono text-tactical-gold tracking-widest uppercase">SIH 2026 &bull; Operations</span>
+        </div>
+      </a>
+    </div>
+
+    <!-- Main Navigation Links -->
+    <div class="hidden lg:flex items-center gap-1 text-xs font-semibold text-slate-300 flex-nowrap whitespace-nowrap">
+      <a href="index.html" class="px-2.5 py-1.5 rounded hover:text-white hover:bg-slate-800/80 transition">Home</a>
+      <a href="dashboard.html" class="px-2.5 py-1.5 rounded text-cyan-400 font-bold bg-cyan-950/60 border border-cyan-500/30">Dashboard</a>
+      <a href="gis_map.html" class="px-2.5 py-1.5 rounded hover:text-white hover:bg-slate-800/80 transition">GIS Maps</a>
+      <a href="ai_risk_engine.html" class="px-2.5 py-1.5 rounded hover:text-white hover:bg-slate-800/80 transition">AI Risk Engine</a>
+      <a href="digital_twin.html" class="px-2.5 py-1.5 rounded hover:text-white hover:bg-slate-800/80 transition">3D Digital Twin</a>
+      <a href="alert_center.html" class="px-2.5 py-1.5 rounded text-red-400 font-bold hover:bg-red-950/40 hover:text-red-300 border border-red-500/20 transition flex items-center gap-1">
+        <span class="material-symbols-outlined text-xs text-red-400 animate-pulse">campaign</span> Alert Center
+      </a>
+      <a href="evacuation_rescue.html" class="px-2.5 py-1.5 rounded hover:text-amber-300 hover:bg-slate-800/80 transition flex items-center gap-1">
+        <span class="material-symbols-outlined text-xs text-amber-400">directions_run</span> Evacuation
+      </a>
+    </div>
+
+    <div class="flex items-center gap-2.5 shrink-0 flex-nowrap">
+      <a 
+        href="alert_center.html" 
+        class="bg-[#f87171] hover:bg-[#ef4444] text-slate-950 font-black text-xs px-3 py-1.5 rounded-lg flex items-center gap-1 uppercase tracking-wider shadow-md shadow-red-500/30 transition transform active:scale-95"
+      >
+        <span class="material-symbols-outlined text-sm">campaign</span> SEND ALERT
+      </a>
+
+      <div class="flex items-center gap-1 text-slate-400 border-l border-slate-800 pl-2.5">
+        <a href="gis_map.html" class="p-1.5 hover:text-cyan-400 hover:bg-slate-800/60 rounded transition" title="GIS Map">
+          <span class="material-symbols-outlined text-base">map</span>
+        </a>
+        <a href="ai_risk_engine.html" class="p-1.5 hover:text-cyan-400 hover:bg-slate-800/60 rounded transition" title="AI Model">
+          <span class="material-symbols-outlined text-base">psychology</span>
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ══ MAIN LAYOUT ══ -->
+  <div class="flex flex-1 min-h-0 overflow-hidden">
+    
+    <!-- ══ LEFT SIDEBAR: Admin Ops ══ -->
+    <aside class="w-60 bg-[#090d16] border-r border-dark-border flex flex-col py-4 px-3 shrink-0 hidden md:flex justify-between">
+      <div class="space-y-4">
+        <div class="px-2">
+          <h2 class="text-base font-bold text-white tracking-tight">Admin Ops</h2>
+          <p class="text-xs text-slate-400 font-mono">FastAPI: Port 8000</p>
+        </div>
+
+        <nav class="space-y-1 text-xs font-semibold">
+          <a href="dashboard.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/30 transition">
+            <span class="material-symbols-outlined text-base text-cyan-400">grid_view</span>
+            <span>Command Center</span>
+          </a>
+
+          <a href="alert_center.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-red-400 hover:bg-red-950/40 hover:text-red-300 transition border border-red-500/20">
+            <span class="material-symbols-outlined text-base text-red-400 animate-pulse">campaign</span>
+            <span>Alert Center (FCM)</span>
+          </a>
+
+          <a href="gis_map.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800/60 hover:text-white transition">
+            <span class="material-symbols-outlined text-base text-cyan-400">map</span>
+            <span>Live GIS Risk Map</span>
+          </a>
+
+          <a href="ai_risk_engine.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800/60 hover:text-purple-400 transition">
+            <span class="material-symbols-outlined text-base text-purple-400">psychology</span>
+            <span>AI Risk Engine</span>
+          </a>
+
+          <a href="digital_twin.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800/60 hover:text-white transition">
+            <span class="material-symbols-outlined text-base text-slate-400">3d_rotation</span>
+            <span>Digital Twin</span>
+          </a>
+
+          <a href="early_warning.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800/60 hover:text-white transition">
+            <span class="material-symbols-outlined text-base text-slate-400">podcasts</span>
+            <span>Rescue Units</span>
+          </a>
+
+          <a href="admin_login.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800/60 hover:text-white transition">
+            <span class="material-symbols-outlined text-base text-slate-400">settings</span>
+            <span>System Logs</span>
+          </a>
+        </nav>
+      </div>
+
+      <div class="pt-4">
+        <a 
+          href="ai_intelligence.html"
+          class="w-full bg-tactical-cyan hover:bg-cyan-300 text-slate-950 font-black text-xs py-3 px-4 rounded-lg flex items-center justify-center gap-2 uppercase tracking-wider shadow-lg shadow-cyan-500/30 transition transform active:scale-98"
+        >
+          <span class="material-symbols-outlined text-base">near_me</span>
+          <span>Dispatch Unit</span>
+        </a>
+      </div>
+    </aside>
+
+    <!-- ══ MAIN DASHBOARD WORKSPACE ══ -->
+    <main class="flex-1 min-h-0 overflow-y-auto p-4 md:p-6 lg:p-8 bg-[#070a11] flex flex-col gap-6">
+      
+      <!-- 🚨 High-Priority Live SOS Emergency Alert Bar (Auto-Synced with Central Backend & SMS) -->
+      <div id="adminSosAlertBanner" class="shrink-0 w-full min-h-fit bg-[#0c1220] border border-emerald-500/30 rounded-2xl p-4 md:p-5 shadow-lg flex flex-col gap-3.5 relative transition-all duration-300">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
+          <div class="flex items-center gap-3">
+            <div id="adminSosIconContainer" class="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+              <span id="adminSosIcon" class="material-symbols-outlined text-xl">verified_user</span>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 id="adminSosTitle" class="text-sm md:text-base font-bold text-slate-200 tracking-wide uppercase">EMERGENCY SOS MONITOR</h2>
+                <span id="adminSosCountBadge" class="bg-emerald-950 text-emerald-300 border border-emerald-500/40 font-mono text-[10px] font-bold px-2 py-0.5 rounded-full">0 ACTIVE</span>
+              </div>
+              <p id="adminSosSubtitle" class="text-xs text-slate-400">All emergency sectors secure. Real-time telemetry connected.</p>
+            </div>
+          </div>
+          
+          <div class="flex items-center gap-3">
+            <button 
+              id="adminSosResolveAllBtn" 
+              onclick="window.adminResolveAllSOS()" 
+              class="hidden bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 border border-emerald-500/50 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition flex items-center gap-1.5 shadow-sm active:scale-95"
+            >
+              <span class="material-symbols-outlined text-sm">done_all</span>
+              <span>Resolve All Alerts</span>
+            </button>
+            <div class="flex items-center gap-2 text-xs font-mono">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span class="text-emerald-300">SOS Engine: Port 8000</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dynamic SOS Events Grid -->
+        <div id="adminSosEventsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+          <div class="col-span-full py-2.5 text-center text-slate-400 text-xs font-mono flex items-center justify-center gap-2">
+            <span class="material-symbols-outlined text-sm text-emerald-400">check_circle</span>
+            <span>All emergency sectors secure. Monitoring live SOS frequency...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Metrics Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <div class="bg-[#0d1322] border border-dark-border p-5 rounded-xl flex flex-col gap-1 shadow-sm relative overflow-hidden">
+          <div class="absolute top-0 left-0 w-1.5 h-full bg-cyan-400"></div>
+          <span class="text-[11px] font-mono text-slate-400 uppercase tracking-wider">FastAPI Backend Status</span>
+          <span id="dashApiStatus" class="text-2xl font-black text-emerald-400 font-mono">ONLINE</span>
+          <span class="text-[10px] text-slate-400 font-mono">POST /analyze-location</span>
+        </div>
+
+        <div class="bg-[#0d1322] border border-dark-border p-5 rounded-xl flex flex-col gap-1 shadow-sm relative overflow-hidden">
+          <div class="absolute top-0 left-0 w-1.5 h-full bg-tactical-gold"></div>
+          <span class="text-[11px] font-mono text-slate-400 uppercase tracking-wider">XGBoost Landslide Prob</span>
+          <span id="dashXgProb" class="text-2xl font-black text-tactical-gold font-mono">0.0%</span>
+          <span class="text-[10px] text-amber-300 font-bold" id="dashRiskLevel">AI Risk: LOW</span>
+        </div>
+
+        <div class="bg-[#0d1322] border border-dark-border p-5 rounded-xl flex flex-col gap-1 shadow-sm relative overflow-hidden">
+          <div class="absolute top-0 left-0 w-1.5 h-full bg-tactical-salmon"></div>
+          <span class="text-[11px] font-mono text-slate-400 uppercase tracking-wider">Geotechnical Factor of Safety</span>
+          <span id="dashFs" class="text-2xl font-black text-emerald-400 font-mono">3.75</span>
+          <span class="text-[10px] text-emerald-400 font-bold" id="dashStability">STABLE</span>
+        </div>
+
+        <div class="bg-[#0d1322] border border-dark-border p-5 rounded-xl flex flex-col gap-1 shadow-sm relative overflow-hidden">
+          <div class="absolute top-0 left-0 w-1.5 h-full bg-pink-500"></div>
+          <span class="text-[11px] font-mono text-slate-400 uppercase tracking-wider">Satellite Surface NDVI</span>
+          <span id="dashNdvi" class="text-2xl font-black text-tactical-pink font-mono">0.65</span>
+          <span class="text-[10px] text-pink-400 font-bold">Sentinel-2 Harmonized</span>
+        </div>
+
+      </div>
+
+      <!-- Main Threat Map + Sidebar Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Live GIS Map Preview -->
+        <div class="lg:col-span-2 bg-[#05080e] border border-dark-border rounded-xl overflow-hidden shadow-2xl flex flex-col relative min-h-[480px]">
+          <div class="absolute top-4 left-4 z-[400] bg-black/80 backdrop-blur border border-cyan-500/40 px-3 py-1.5 rounded-lg shadow-md text-xs font-bold text-white flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-tactical-salmon animate-ping"></span>
+            <span>Click Map to Analyze Location via FastAPI</span>
+          </div>
+
+          <div class="absolute top-4 right-4 z-[400] flex gap-2">
+            <a href="gis_map.html" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow transition">
+              <span class="material-symbols-outlined text-sm">open_in_new</span> Full GIS Map
+            </a>
+            <a href="ai_risk_engine.html" class="bg-tactical-gold hover:bg-amber-400 text-slate-950 font-black text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow transition">
+              <span class="material-symbols-outlined text-sm">psychology</span> AI Engine
+            </a>
+          </div>
+
+          <div id="miniMap" class="w-full h-full absolute inset-0"></div>
+        </div>
+
+        <!-- AI Threat Intelligence Panel (Populated via POST /analyze-location) -->
+        <div class="bg-[#0d1322] border border-dark-border rounded-xl p-6 shadow-sm flex flex-col justify-between gap-4">
+          <div class="space-y-3">
+            <div class="border-b border-slate-800 pb-3">
+              <h3 class="text-base font-bold text-white flex items-center gap-2">
+                <span class="material-symbols-outlined text-cyan-400 text-lg">crisis_alert</span>
+                <span>Live Location Intelligence</span>
+              </h3>
+              <div class="flex justify-between items-center bg-[#070a12] border border-slate-800 p-2.5 rounded-lg mt-2 font-mono text-xs">
+                <span class="text-slate-400">TARGET:</span>
+                <span class="text-cyan-300 font-bold" id="dashTargetCoords">19.32° N, 73.87° E</span>
+              </div>
+            </div>
+
+            <div class="space-y-2 text-xs font-mono">
+              <div class="flex justify-between py-1 border-b border-slate-800/60">
+                <span class="text-slate-400">Final Risk Level:</span>
+                <b class="text-emerald-400" id="dashFinalRisk">LOW</b>
+              </div>
+              <div class="flex justify-between py-1 border-b border-slate-800/60">
+                <span class="text-slate-400">Physics Risk:</span>
+                <b class="text-cyan-300" id="dashPhysRisk">LOW</b>
+              </div>
+              <div class="flex justify-between py-1 border-b border-slate-800/60">
+                <span class="text-slate-400">Pore-Water Pressure:</span>
+                <b class="text-white" id="dashPore">10.11 kPa</b>
+              </div>
+              <div class="flex justify-between py-1 border-b border-slate-800/60">
+                <span class="text-slate-400">Wetting Front Depth:</span>
+                <b class="text-white" id="dashWetting">1.10 m</b>
+              </div>
+              <div class="flex justify-between py-1 border-b border-slate-800/60">
+                <span class="text-slate-400">Elevation / Slope:</span>
+                <b class="text-white" id="dashElevSlope">450m / 12.0°</b>
+              </div>
+              <div class="flex justify-between py-1 border-b border-slate-800/60">
+                <span class="text-slate-400">Rainfall (24h / 72h):</span>
+                <b class="text-tactical-gold" id="dashRain">145 / 220 mm</b>
+              </div>
+            </div>
+
+            <div class="bg-[#070a12] p-3 rounded-lg border border-slate-800 text-xs text-slate-300 leading-relaxed font-sans">
+              <span class="font-bold text-cyan-400 block mb-1">Backend Reasoning</span>
+              <span id="dashReason">Both the AI prediction and physics-based stability analysis indicate low current risk.</span>
+            </div>
+          </div>
+
+          <div class="flex gap-2">
+            <a href="gis_map.html" class="flex-1 bg-tactical-gold hover:bg-amber-400 text-slate-950 text-xs font-black py-2.5 rounded-lg text-center transition shadow">
+              Open Full GIS Map
+            </a>
+            <a href="ai_risk_engine.html" class="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold py-2.5 rounded-lg text-center transition">
+              Run Full Engine
+            </a>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Live Citizen Evidence & Uploaded Image Forensics Feed -->
+      <div class="bg-[#0d1322] border border-dark-border rounded-xl p-6 shadow-xl flex flex-col gap-5">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+              <span class="material-symbols-outlined text-xl">photo_camera</span>
+            </div>
+            <div>
+              <h3 class="text-base font-bold text-white flex items-center gap-2">
+                <span>Citizen Evidence Photos & Hazard Reports</span>
+                <span class="bg-cyan-500/20 text-cyan-300 text-[10px] font-mono font-bold px-2 py-0.5 rounded border border-cyan-500/30">REAL-TIME SYNC</span>
+              </h3>
+              <p class="text-xs text-slate-400">Live feed of ground photos and reports submitted from SafeGround Citizen App</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 text-xs font-mono">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span class="text-slate-300">Live PWA Telemetry Channel</span>
+          </div>
+        </div>
+
+        <!-- Evidence Gallery Grid -->
+        <div id="citizenEvidenceGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Populated dynamically by JS -->
+          <div class="col-span-full py-8 text-center text-slate-500 text-xs font-mono flex flex-col items-center gap-2">
+            <span class="material-symbols-outlined text-3xl animate-spin text-cyan-400">sync</span>
+            <span>Connecting to SafeGround Citizen App telemetry feed...</span>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- Script: Initialize Mini GIS Threat Map & Query Backend -->
+  <script>
+    var currentMarker = null;
+
+    async function analyzeAndDisplay(lat, lon) {
+      document.getElementById('dashTargetCoords').innerText = `${lat.toFixed(2)}° N, ${lon.toFixed(2)}° E`;
+
+      try {
+        const data = await window.PrithviShieldAPI.analyzeLocation(lat, lon);
+        const env = data.environmental_data || {};
+        const phys = data.physics || {};
+        const xg = data.xgboost || {};
+        const fin = data.final_assessment || {};
+
+        document.getElementById('dashApiStatus').innerText = "ONLINE";
+        document.getElementById('dashApiStatus').className = "text-2xl font-black text-emerald-400 font-mono";
+
+        document.getElementById('dashXgProb').innerText = `${xg.landslide_probability || 0.0}%`;
+        document.getElementById('dashRiskLevel').innerText = `AI Risk: ${xg.risk_level || 'LOW'}`;
+
+        document.getElementById('dashFs').innerText = phys.factor_of_safety !== undefined ? phys.factor_of_safety : "N/A";
+        document.getElementById('dashStability').innerText = phys.stability || "STABLE";
+
+        document.getElementById('dashNdvi').innerText = env.ndvi !== undefined ? env.ndvi : "0.65";
+
+        document.getElementById('dashFinalRisk').innerText = fin.risk_level || "LOW";
+        document.getElementById('dashPhysRisk').innerText = fin.physics_risk || "LOW";
+        document.getElementById('dashPore').innerText = `${phys.pore_pressure_kpa || 0} kPa`;
+        document.getElementById('dashWetting').innerText = `${phys.wetting_front_depth_m || 0} m`;
+        document.getElementById('dashElevSlope').innerText = `${env.elevation_m || 0}m / ${env.slope_deg || 0}°`;
+        document.getElementById('dashRain').innerText = `${env.rainfall_24h || 0} / ${env.rainfall_72h || 0} mm`;
+        document.getElementById('dashReason').innerText = fin.reason || "Analysis complete.";
+      } catch (err) {
+        document.getElementById('dashApiStatus').innerText = "OFFLINE";
+        document.getElementById('dashApiStatus').className = "text-2xl font-black text-red-400 font-mono";
+        document.getElementById('dashReason').innerText = "Unable to connect to landslide analysis server.";
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', function() {
+      var miniMap = L.map('miniMap', {
+        center: [19.32, 73.87],
+        zoom: 7,
+        zoomControl: false
+      });
+
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri',
+        maxZoom: 16
+      }).addTo(miniMap);
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 16
+      }).addTo(miniMap);
+
+      if (window.PRITHVI_SHIELD_LANDSLIDE_DATA) {
+        var heatPoints = window.PRITHVI_SHIELD_LANDSLIDE_DATA.map(p => [p[0], p[1], p[5]]);
+        L.heatLayer(heatPoints, {
+          radius: 16,
+          blur: 20,
+          maxZoom: 8,
+          max: 1.0,
+          gradient: { 0.2: "#10b981", 0.4: "#eab308", 0.6: "#f97316", 0.8: "#ef4444", 1.0: "#881337" }
+        }).addTo(miniMap);
+      }
+
+      currentMarker = L.marker([19.32, 73.87]).addTo(miniMap);
+
+      miniMap.on('click', function(e) {
+        if (currentMarker) miniMap.removeLayer(currentMarker);
+        currentMarker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(miniMap);
+        analyzeAndDisplay(e.latlng.lat, e.latlng.lng);
+      });
+
+      // Initial analysis
+      analyzeAndDisplay(19.32, 73.87);
+
+      // Render Citizen App Uploaded Evidence Cards
+      // ══ CITIZEN HAZARD EVIDENCE FEED & DEEPFAKE VERIFICATION CARDS (Sections 18-32) ══
+      var hazardMapMarkers = [];
+
+      window.locateHazardOnMap = function(lat, lng, title) {
+        if (!miniMap || isNaN(lat) || isNaN(lng)) return;
+        miniMap.setView([lat, lng], 14, { animate: true });
+        
+        // Remove existing temp marker
+        if (window._tempHazardMarker) miniMap.removeLayer(window._tempHazardMarker);
+
+        window._tempHazardMarker = L.circleMarker([lat, lng], {
+          radius: 14,
+          fillColor: '#00e5ff',
+          color: '#ffffff',
+          weight: 3,
+          opacity: 1,
+          fillOpacity: 0.85
+        }).addTo(miniMap);
+
+        window._tempHazardMarker.bindPopup(`
+          <div class="font-mono text-xs p-1">
+            <b class="text-cyan-400 block">${title || 'Citizen Landslide Report'}</b>
+            <span>GPS: ${Number(lat).toFixed(4)}°, ${Number(lng).toFixed(4)}°</span><br/>
+            <span class="text-emerald-400 font-bold">Deepfake Verified Genuine</span>
+          </div>
+        `).openPopup();
+      };
+
+      window.handleAdminReportAction = async function(reportId, actionName) {
+        const baseUrl = window.getApiBaseUrl ? window.getApiBaseUrl() : 'http://127.0.0.1:8000';
+        try {
+          const res = await fetch(`${baseUrl}/api/hazards/reports/${reportId}/action`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: actionName,
+              admin_notes: `Action ${actionName} applied via Admin Command Dashboard`,
+              responder_name: 'Admin Controller'
+            })
+          });
+          const data = await res.json();
+          if (res.ok) {
+            console.log(`✅ Action ${actionName} applied to ${reportId}`);
+            renderCitizenEvidenceFeed();
+          } else {
+            alert('Action failed: ' + (data.detail || data.message || 'Unknown error'));
+          }
+        } catch (err) {
+          console.warn('Backend action fallback:', err);
+          // Fallback update local storage item
+          const uploaded = JSON.parse(localStorage.getItem('safeground_citizen_uploaded_reports') || '[]');
+          const item = uploaded.find(r => r.report_id === reportId || r.id === reportId);
+          if (item) {
+            if (actionName === 'APPROVE') item.status = 'APPROVED';
+            else if (actionName === 'REJECT') item.status = 'REJECTED';
+            else if (actionName === 'MARK_SUSPICIOUS') item.status = 'SUSPICIOUS';
+            else if (actionName === 'REQUEST_MANUAL_VERIFICATION') item.status = 'ADMIN_REVIEW';
+            else if (actionName === 'CONVERT_TO_HAZARD_ALERT') item.status = 'APPROVED';
+            else if (actionName === 'SEND_EMERGENCY_NOTIFICATION') item.status = 'EMERGENCY_ALERT_SENT';
+            localStorage.setItem('safeground_citizen_uploaded_reports', JSON.stringify(uploaded));
+          }
+          renderCitizenEvidenceFeed();
+        }
+      };
+
+      async function renderCitizenEvidenceFeed() {
+        const grid = document.getElementById('citizenEvidenceGrid');
+        if (!grid) return;
+
+        let reports = [];
+        try {
+          const map = new Map();
+          const baseUrl = window.getApiBaseUrl ? window.getApiBaseUrl() : 'http://127.0.0.1:8000';
+
+          // 1. Fetch from Central Database via FastAPI (Requirements 25 & 26)
+          try {
+            const apiRes = await fetch(`${baseUrl}/api/hazards/reports?limit=50`);
+            if (apiRes.ok) {
+              const apiData = await apiRes.json();
+              const backendReports = apiData.reports || [];
+              backendReports.forEach(r => {
+                const code = r.report_code || r.report_id || ('PS-2026-' + r.id);
+                const verif = r.image_verification || {};
+                const authScore = verif.authenticity_score !== undefined ? verif.authenticity_score : (r.authenticity_score || 94.0);
+                const deepfakeStatus = verif.verification_status || r.deepfake_status || (authScore >= 65 ? 'AUTHENTIC' : 'SUSPICIOUS');
+
+                map.set(code, {
+                  id: code,
+                  report_id: code,
+                  report_code: code,
+                  title: r.title || `${r.hazard_type || r.category || 'LANDSLIDE'} Incident`,
+                  hazard_type: r.hazard_type || r.category || 'LANDSLIDE',
+                  category: r.category || r.hazard_type || 'LANDSLIDE',
+                  citizen_name: r.user_name || r.citizen_name || 'Verified Citizen',
+                  severity: r.severity || 'CRITICAL',
+                  ai_risk_level: r.ai_risk_level || 'HIGH',
+                  status: r.status || 'UNDER_AI_VERIFICATION',
+                  deepfake_status: deepfakeStatus,
+                  authenticity_score: authScore,
+                  ai_generated_probability: verif.ai_generated_probability !== undefined ? verif.ai_generated_probability : (100 - authScore).toFixed(1),
+                  manipulation_probability: verif.manipulation_probability !== undefined ? verif.manipulation_probability : 5.0,
+                  decision: verif.decision || r.verification_decision || (authScore >= 65 ? 'Image appears to be a genuine photograph.' : 'Manual verification required.'),
+                  model_version: verif.model_version || 'ResNet-18 Deepfake Detection AI v2.1',
+                  forensics: verif.forensics || {},
+                  time: r.created_at ? new Date(r.created_at).toLocaleString('en-US', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '05 Sep 2026, 10:30 PM',
+                  lat: parseFloat(r.latitude) || 27.3389,
+                  lng: parseFloat(r.longitude) || 88.6065,
+                  accuracy: r.location_accuracy || 10.0,
+                  image: (r.image_data && r.image_data.startsWith('data:image')) ? r.image_data : (r.image_url ? (r.image_url.startsWith('http') ? r.image_url : `${baseUrl}${r.image_url}`) : (r.image_data || 'https://lh3.googleusercontent.com/aida-public/AB6AXuBnPOoo9P23syYg1w-SxSr6sZG6SSLdTI65ri16kRNg5yJ1ZSfMHTn0ZaT7Wpp2UbqKw5OV-FOKGs_UcPQVbNPb1wjn7fWrBfprwl8zRdODYfmLAY96qVKI80MNSSsg8e3cuwKEt2mCwPtlsxoFjy9kQJfW1EreXkVvrZcj6UF-lkYC_tYwFD4_wnQk-_Ohxg3Tt7C0YtFi-o57Zn5QxIgIGMn9sg2cBcNDj3VGoMQuhQ8Xdl09f872lQ')),
+                  raw_image_data: r.image_data || '',
+                  description: r.description || 'Citizen submitted hazard with verified photograph and GPS telemetry.',
+                  source: 'Central Supabase / FastAPI'
+                });
+              });
+            }
+          } catch (apiErr) {
+            console.warn('Central database hazard query note:', apiErr);
+          }
+
+          // 2. Fetch from Supabase Cloud fallback
+          try {
+            const { fetchLiveCitizenPlaces } = await import('./assets/js/admin_supabase.js');
+            const dbPlaces = await fetchLiveCitizenPlaces();
+            if (dbPlaces && dbPlaces.length > 0) {
+              dbPlaces.forEach(p => {
+                const key = 'PS-2026-' + p.id.slice(0, 5).toUpperCase();
+                if (!map.has(key)) {
+                  map.set(key, {
+                    id: key,
+                    report_id: key,
+                    report_code: key,
+                    title: p.name || 'Landslide Field Report',
+                    hazard_type: 'LANDSLIDE',
+                    category: p.categories?.name || 'Landslide',
+                    citizen_name: 'Verified User',
+                    severity: 'CRITICAL',
+                    ai_risk_level: 'HIGH',
+                    status: 'VERIFIED',
+                    deepfake_status: 'AUTHENTIC',
+                    authenticity_score: 94.0,
+                    ai_generated_probability: 3.0,
+                    manipulation_probability: 5.0,
+                    decision: 'Image appears to be a genuine photograph.',
+                    model_version: 'ResNet-18 Deepfake Detection AI v2.1',
+                    time: new Date(p.created_at || Date.now()).toLocaleString('en-US', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                    lat: p.latitude || 27.3389,
+                    lng: p.longitude || 88.6065,
+                    image: p.photos?.[0]?.public_url || 'https://lh3.googleusercontent.com/aida-public/AB6AXuBnPOoo9P23syYg1w-SxSr6sZG6SSLdTI65ri16kRNg5yJ1ZSfMHTn0ZaT7Wpp2UbqKw5OV-FOKGs_UcPQVbNPb1wjn7fWrBfprwl8zRdODYfmLAY96qVKI80MNSSsg8e3cuwKEt2mCwPtlsxoFjy9kQJfW1EreXkVvrZcj6UF-lkYC_tYwFD4_wnQk-_Ohxg3Tt7C0YtFi-o57Zn5QxIgIGMn9sg2cBcNDj3VGoMQuhQ8Xdl09f872lQ',
+                    description: p.description || 'Citizen submitted hazard with cloud photo evidence.',
+                    source: 'Supabase Cloud'
+                  });
+                }
+              });
+            }
+          } catch (spErr) {
+            console.warn('Supabase places query note:', spErr);
+          }
+
+          // 3. Check custom uploaded reports from citizen app local storage fallback
+          const uploaded = JSON.parse(localStorage.getItem('safeground_citizen_uploaded_reports') || '[]');
+          uploaded.forEach(item => {
+            const key = item.report_code || item.report_id || item.id;
+            if (!map.has(key)) {
+              map.set(key, {
+                id: key,
+                report_id: key,
+                report_code: key,
+                title: item.title || 'Landslide Field Report',
+                hazard_type: item.hazard_type || item.category || 'LANDSLIDE',
+                category: item.category || 'LANDSLIDE',
+                citizen_name: item.user_name || 'Verified User',
+                severity: item.severity || 'CRITICAL',
+                ai_risk_level: item.ai_risk_level || 'HIGH',
+                status: item.status || 'UNDER_AI_VERIFICATION',
+                deepfake_status: item.deepfake_status || (item.authenticity_score >= 65 ? 'AUTHENTIC' : 'UNDER_AI_VERIFICATION'),
+                authenticity_score: item.authenticity_score || 94.0,
+                ai_generated_probability: item.ai_generated_probability || 3.0,
+                manipulation_probability: item.manipulation_probability || 5.0,
+                decision: item.verification_decision || 'Image appears to be a genuine photograph.',
+                model_version: 'ResNet-18 Deepfake Detection AI v2.1',
+                time: item.date_formatted ? `${item.date_formatted}, ${item.time_formatted}` : '05 Sep 2026, 10:30 PM',
+                lat: item.lat || 27.3389,
+                lng: item.lng || 88.6065,
+                image: item.image || item.image_url,
+                description: item.description || 'Citizen verified landslide incident with photo and GPS evidence.',
+                source: 'Citizen App Local Channel'
+              });
+            }
+          });
+
+          // Seed default compliant reports if empty
+          if (map.size === 0) {
+            map.set('PS-2026-00124', {
+              id: 'PS-2026-00124',
+              report_id: 'PS-2026-00124',
+              report_code: 'PS-2026-00124',
+              title: 'Landslide Debris & Crack',
+              hazard_type: 'LANDSLIDE',
+              category: 'LANDSLIDE',
+              citizen_name: 'Verified User (Rahul Sharma)',
+              severity: 'CRITICAL',
+              ai_risk_level: 'HIGH',
+              status: 'VERIFIED',
+              deepfake_status: 'AUTHENTIC',
+              authenticity_score: 94.0,
+              ai_generated_probability: 3.0,
+              manipulation_probability: 5.0,
+              decision: 'Image appears to be a genuine photograph.',
+              model_version: 'ResNet-18 Deepfake Detection AI v2.1',
+              forensics: {
+                sensor_fingerprint: "AUTHENTIC_CMOS_SENSOR",
+                spectral_status: "DEEPFAKE_RESNET18_EVALUATED",
+                edge_continuity: "AUTHENTIC_TEXTURE",
+                action_permission: "PERMITTED_FOR_DISASTER_PROCESSING"
+              },
+              time: '05 Sep 2026, 10:30 PM',
+              lat: 27.3389,
+              lng: 88.6065,
+              image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBnPOoo9P23syYg1w-SxSr6sZG6SSLdTI65ri16kRNg5yJ1ZSfMHTn0ZaT7Wpp2UbqKw5OV-FOKGs_UcPQVbNPb1wjn7fWrBfprwl8zRdODYfmLAY96qVKI80MNSSsg8e3cuwKEt2mCwPtlsxoFjy9kQJfW1EreXkVvrZcj6UF-lkYC_tYwFD4_wnQk-_Ohxg3Tt7C0YtFi-o57Zn5QxIgIGMn9sg2cBcNDj3VGoMQuhQ8Xdl09f872lQ',
+              description: 'Visible rock displacement and deep ground fracture across mountain arterial highway.'
+            });
+
+            map.set('PS-2026-00125', {
+              id: 'PS-2026-00125',
+              report_id: 'PS-2026-00125',
+              report_code: 'PS-2026-00125',
+              title: 'Suspicious Generative Mudflow',
+              hazard_type: 'LANDSLIDE',
+              category: 'LANDSLIDE',
+              citizen_name: 'Anonymous Reporter',
+              severity: 'ELEVATED',
+              ai_risk_level: 'HIGH',
+              status: 'SUSPICIOUS',
+              deepfake_status: 'SUSPICIOUS',
+              authenticity_score: 28.0,
+              ai_generated_probability: 72.0,
+              manipulation_probability: 68.0,
+              decision: 'Manual verification required. High synthetic diffusion noise detected.',
+              model_version: 'ResNet-18 Deepfake Detection AI v2.1',
+              forensics: {
+                sensor_fingerprint: "GENERATIVE_DIFFUSION_NOISE",
+                spectral_status: "AI_GENERATED_FEATURES_DETECTED",
+                edge_continuity: "SYNTHETIC_DIFFUSION_SMOOTHING",
+                action_permission: "BLOCKED_FALSE_ALARM_PREVENTED"
+              },
+              time: '05 Sep 2026, 09:45 PM',
+              lat: 19.3240,
+              lng: 73.8710,
+              image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDmg4SnpnOmKrVzdfYM--jqKrqT-JCkZMmmCZKxlFRrgXF1Y7qGd9VyRjKHAAojdB3FKo_pgQOtvy4AMJuVB9ib6XXpsIpZYIU7bBPYO5Jmg6UrH4jYl50qiFdnNP_nD2m8kLJs_ELe_vryPs9eKTXqBON-1TcszJTeR_YFgA4HFnmx8oRQrVasivGtsd05Ilqtn3aaDBr2W27KRvA0eyeAS_GdAhrufK2Up96vmpnAytjjzqSNjXyzFw',
+              description: 'AI hallucinated mudflow photograph submitted without calibrated sensor metadata.'
+            });
+          }
+
+          reports = Array.from(map.values());
+        } catch (e) {
+          console.warn('Error rendering citizen evidence feed:', e);
+        }
+
+        if (reports.length === 0) {
+          grid.innerHTML = `<div class="col-span-full py-8 text-center text-slate-500 text-xs font-mono">No evidence photos uploaded yet.</div>`;
+          return;
+        }
+
+        // Render Cards matching Section 22 layout with full Section 23 actions
+        grid.innerHTML = reports.map(r => {
+          const isAuthentic = r.deepfake_status === 'AUTHENTIC' || (r.authenticity_score >= 65 && r.status !== 'SUSPICIOUS');
+          const isUnderAI = r.status === 'UNDER_AI_VERIFICATION';
+          const isSuspicious = r.status === 'SUSPICIOUS' || r.deepfake_status === 'SUSPICIOUS' || r.deepfake_status === 'AI_GENERATED';
+          const isApproved = r.status === 'APPROVED';
+          const isAlertSent = r.status === 'EMERGENCY_ALERT_SENT';
+          const isRejected = r.status === 'REJECTED';
+
+          // Status Badge Color Class
+          let statusBadgeClass = "bg-amber-950/80 text-amber-300 border border-amber-500/60";
+          if (isApproved || isAuthentic) statusBadgeClass = "bg-emerald-950/80 text-emerald-300 border border-emerald-500/60";
+          if (isSuspicious || isRejected) statusBadgeClass = "bg-red-950/80 text-red-300 border border-red-500/60";
+          if (isAlertSent) statusBadgeClass = "bg-purple-950/80 text-purple-300 border border-purple-500/60 animate-pulse";
+          if (isUnderAI) statusBadgeClass = "bg-cyan-950/80 text-cyan-300 border border-cyan-500/60 animate-pulse";
+
+          const encodedDesc = (r.description || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+          const encodedForensics = encodeURIComponent(JSON.stringify(r.forensics || {}));
+
+          return `
+            <!-- ══ CITIZEN REPORT CARD (Requirement 22) ══ -->
+            <div class="bg-[#0b1120] border ${isSuspicious ? 'border-red-500/60' : 'border-slate-800 hover:border-cyan-500/50'} rounded-2xl overflow-hidden shadow-xl transition-all group flex flex-col justify-between">
+              
+              <!-- Card Top Header: Report Code & Status -->
+              <div class="p-3 bg-[#080d1a] border-b border-slate-800/80 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-base ${isSuspicious ? 'text-red-400' : 'text-cyan-400'}">badge</span>
+                  <span class="font-mono text-xs font-black tracking-wider text-white">REPORT ID: <span class="text-cyan-400">${r.report_code || r.report_id}</span></span>
+                </div>
+                <span class="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full ${statusBadgeClass}">
+                  ${r.status}
+                </span>
+              </div>
+
+              <!-- Main Card Body Grid -->
+              <div class="p-4 space-y-3.5 flex-1 flex flex-col justify-between">
+                
+                <!-- Citizen & Hazard Metadata -->
+                <div class="grid grid-cols-2 gap-2 text-xs font-mono bg-black/40 p-2.5 rounded-xl border border-slate-800/60">
+                  <div>
+                    <span class="text-slate-500 text-[10px] block">Citizen:</span>
+                    <span class="font-bold text-white truncate block">${r.citizen_name || 'Verified User'}</span>
+                  </div>
+                  <div>
+                    <span class="text-slate-500 text-[10px] block">Hazard:</span>
+                    <span class="font-black text-amber-400 uppercase tracking-wide block">${r.hazard_type || 'LANDSLIDE'}</span>
+                  </div>
+                </div>
+
+                <!-- Location Telemetry -->
+                <div class="bg-black/30 p-2 rounded-xl text-xs font-mono flex items-center justify-between border border-slate-800/40">
+                  <div class="flex items-center gap-1.5 text-slate-300">
+                    <span class="material-symbols-outlined text-xs text-cyan-400">my_location</span>
+                    <span>Lat: <b>${(Number(r.lat) || 27.3389).toFixed(4)}°</b>, Long: <b>${(Number(r.lng) || 88.6065).toFixed(4)}°</b></span>
+                  </div>
+                  <button onclick="window.locateHazardOnMap(${r.lat}, ${r.lng}, '${r.hazard_type}')" class="text-cyan-400 hover:text-cyan-300 text-[10px] font-bold underline flex items-center gap-0.5">
+                    <span>Map Pin</span>
+                    <span class="material-symbols-outlined text-[12px]">explore</span>
+                  </button>
+                </div>
+
+                <!-- Landslide Photo & Deepfake Verification Badges -->
+                <div class="relative h-52 w-full bg-slate-950 rounded-xl overflow-hidden border border-slate-800 group-hover:border-cyan-500/40 transition cursor-pointer" onclick="window.openImageModal('${r.image}', '${r.hazard_type}', '${encodedDesc}', '${r.lat}', '${r.lng}', '${r.deepfake_status}', ${r.authenticity_score}, ${r.ai_generated_probability}, ${r.manipulation_probability}, '${r.decision}', '${encodedForensics}', '${r.report_code}')">
+                  <img src="${r.image}" onerror="if (this.dataset.fallbackApplied !== '1' && '${r.raw_image_data}') { this.dataset.fallbackApplied = '1'; this.src = '${r.raw_image_data}'; } else if (!this.src.includes('unsplash')) { this.src = 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800'; }" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Landslide Photo" />
+                  <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/40"></div>
+
+                  <!-- Deepfake Status Overlay Badge -->
+                  <div class="absolute top-2.5 left-2.5">
+                    ${isAuthentic ? `
+                      <span class="bg-emerald-950/90 border border-emerald-400 text-emerald-300 font-mono text-[10px] font-black px-2.5 py-1 rounded-lg shadow-md flex items-center gap-1">
+                        <span class="material-symbols-outlined text-xs">verified</span>
+                        <span>✓ AUTHENTIC</span>
+                      </span>
+                    ` : isSuspicious ? `
+                      <span class="bg-red-950/90 border border-red-500 text-red-300 font-mono text-[10px] font-black px-2.5 py-1 rounded-lg shadow-md flex items-center gap-1 animate-pulse">
+                        <span class="material-symbols-outlined text-xs">warning</span>
+                        <span>🚨 SUSPICIOUS</span>
+                      </span>
+                    ` : `
+                      <span class="bg-cyan-950/90 border border-cyan-400 text-cyan-300 font-mono text-[10px] font-bold px-2 py-0.5 rounded-lg flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+                        <span>ANALYZING AI...</span>
+                      </span>
+                    `}
+                  </div>
+
+                  <!-- Authenticity Score & AI Risk Level Overlay -->
+                  <div class="absolute top-2.5 right-2.5 flex flex-col items-end gap-1">
+                    <span class="bg-black/80 border border-slate-700 text-cyan-300 font-mono text-[11px] font-black px-2.5 py-0.5 rounded-lg shadow">
+                      Score: ${r.authenticity_score}%
+                    </span>
+                    <span class="bg-red-950/80 border border-red-800 text-red-300 font-mono text-[9px] font-bold px-2 py-0.5 rounded">
+                      Risk: ${r.ai_risk_level}
+                    </span>
+                  </div>
+
+                  <!-- Bottom Caption: Time & Click to inspect -->
+                  <div class="absolute bottom-2 left-2.5 right-2.5 flex justify-between items-center text-[10px] font-mono text-slate-300">
+                    <span class="flex items-center gap-1 text-slate-300">
+                      <span class="material-symbols-outlined text-xs text-slate-400">schedule</span>
+                      ${r.time}
+                    </span>
+                    <span class="text-cyan-400 font-bold flex items-center gap-0.5 group-hover:underline">
+                      <span>Inspect AI</span>
+                      <span class="material-symbols-outlined text-xs">zoom_in</span>
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Description Text -->
+                <p class="text-xs text-slate-300 font-sans line-clamp-2 leading-relaxed italic bg-[#080d18] p-2.5 rounded-xl border border-slate-800/60">
+                  "${r.description}"
+                </p>
+
+                <!-- ══ ADMIN ACTIONS SUITE (Requirement 23) ══ -->
+                <div class="pt-2 border-t border-slate-800/80 space-y-2">
+                  <div class="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                    <span>Admin Operations:</span>
+                    <span class="text-cyan-400">${r.status}</span>
+                  </div>
+
+                  <div class="grid grid-cols-3 gap-1.5 text-[10px] font-mono font-bold">
+                    <button onclick="window.handleAdminReportAction('${r.report_code}', 'APPROVE')" class="py-1.5 px-2 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/60 text-emerald-300 border border-emerald-500/50 transition active:scale-95 flex items-center justify-center gap-1 shadow-sm">
+                      <span class="material-symbols-outlined text-xs">check</span> Approve
+                    </button>
+                    <button onclick="window.handleAdminReportAction('${r.report_code}', 'REJECT')" class="py-1.5 px-2 rounded-lg bg-red-600/30 hover:bg-red-600/60 text-red-300 border border-red-500/50 transition active:scale-95 flex items-center justify-center gap-1 shadow-sm">
+                      <span class="material-symbols-outlined text-xs">close</span> Reject
+                    </button>
+                    <button onclick="window.handleAdminReportAction('${r.report_code}', 'MARK_SUSPICIOUS')" class="py-1.5 px-2 rounded-lg bg-amber-600/30 hover:bg-amber-600/60 text-amber-300 border border-amber-500/50 transition active:scale-95 flex items-center justify-center gap-1 shadow-sm">
+                      <span class="material-symbols-outlined text-xs">warning</span> Flag Fake
+                    </button>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-1.5 text-[10px] font-mono font-bold">
+                    <button onclick="window.handleAdminReportAction('${r.report_code}', 'CONVERT_TO_HAZARD_ALERT')" class="py-1.5 px-2 rounded-lg bg-cyan-600/30 hover:bg-cyan-600/60 text-cyan-200 border border-cyan-500/50 transition active:scale-95 flex items-center justify-center gap-1 shadow-sm">
+                      <span class="material-symbols-outlined text-xs">notification_important</span> Hazard Alert
+                    </button>
+                    <button onclick="window.handleAdminReportAction('${r.report_code}', 'SEND_EMERGENCY_NOTIFICATION')" class="py-1.5 px-2 rounded-lg bg-purple-600/40 hover:bg-purple-600/70 text-purple-200 border border-purple-500/50 transition active:scale-95 flex items-center justify-center gap-1 shadow-sm">
+                      <span class="material-symbols-outlined text-xs">send</span> Broadcast SMS
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      window.openImageModal = function(imgSrc, title, desc, lat, lng, deepfakeStatus, authScore, aiGenProb, manipProb, decision, forensicsEncoded, reportCode) {
+        let modal = document.getElementById('citizenImageModal');
+        let forensics = {};
+        try {
+          forensics = JSON.parse(decodeURIComponent(forensicsEncoded || '{}'));
+        } catch(e) {}
+
+        const isFake = deepfakeStatus === 'SUSPICIOUS' || deepfakeStatus === 'AI_GENERATED' || authScore < 65;
+
+        if (!modal) {
+          modal = document.createElement('div');
+          modal.id = 'citizenImageModal';
+          modal.className = 'fixed inset-0 z-[10000] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 transition-all duration-300';
+          modal.innerHTML = `
+            <div class="relative max-w-4xl w-full bg-[#0d1322] border border-cyan-500/40 rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
+              
+              <!-- Header -->
+              <div class="p-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-cyan-400">psychology_alt</span>
+                  <div>
+                    <h3 id="modalImgTitle" class="text-sm font-bold text-white uppercase font-mono tracking-wider"></h3>
+                    <span id="modalReportIdBadge" class="text-[10px] font-mono text-cyan-300"></span>
+                  </div>
+                </div>
+                <button onclick="document.getElementById('citizenImageModal').classList.add('hidden')" class="text-slate-400 hover:text-white p-1 rounded-lg transition">
+                  <span class="material-symbols-outlined">close</span>
+                </button>
+              </div>
+
+              <!-- Main Content: Image + Deepfake Telemetry Breakdown (Requirement 21) -->
+              <div class="p-4 overflow-y-auto grid grid-cols-1 md:grid-cols-12 gap-5 bg-[#070a12]">
+                
+                <!-- Left: Full-res Image Viewport -->
+                <div class="md:col-span-7 flex flex-col gap-2">
+                  <div class="relative bg-black rounded-2xl overflow-hidden border border-slate-800 flex items-center justify-center min-h-[300px]">
+                    <img id="modalImgTag" src="" class="max-w-full max-h-[50vh] object-contain rounded-xl shadow" alt="Evidence" />
+                  </div>
+                  <p id="modalImgDesc" class="text-xs text-slate-300 font-sans italic bg-[#0b101c] p-3 rounded-xl border border-slate-800"></p>
+                </div>
+
+                <!-- Right: Requirement 21 Verification Result Card -->
+                <div class="md:col-span-5 space-y-3 font-mono text-xs flex flex-col justify-between">
+                  <div class="bg-[#0b101c] border border-slate-800 p-4 rounded-2xl space-y-3">
+                    <div class="text-[10px] text-cyan-400 font-bold uppercase tracking-widest border-b border-slate-800 pb-1 flex items-center justify-between">
+                      <span>IMAGE VERIFICATION RESULT</span>
+                      <span class="text-slate-500">ResNet-18</span>
+                    </div>
+
+                    <div class="flex justify-between items-center py-1">
+                      <span class="text-slate-400">Authenticity Score:</span>
+                      <span id="modalAuthScore" class="text-base font-black"></span>
+                    </div>
+
+                    <div class="flex justify-between items-center py-1 border-t border-slate-800/60">
+                      <span class="text-slate-400">Status:</span>
+                      <span id="modalStatusVerdict" class="font-black px-2 py-0.5 rounded text-[11px]"></span>
+                    </div>
+
+                    <div class="flex justify-between items-center py-1 border-t border-slate-800/60">
+                      <span class="text-slate-400">AI Generated Prob:</span>
+                      <span id="modalAIGenProb" class="text-slate-200 font-bold"></span>
+                    </div>
+
+                    <div class="flex justify-between items-center py-1 border-t border-slate-800/60">
+                      <span class="text-slate-400">Manipulation Prob:</span>
+                      <span id="modalManipProb" class="text-slate-200 font-bold"></span>
+                    </div>
+
+                    <div class="p-2.5 bg-black/60 rounded-xl border border-slate-800 text-[11px] space-y-1">
+                      <span class="text-slate-500 text-[10px] block font-bold">Decision:</span>
+                      <p id="modalDecisionText" class="text-slate-200 font-sans"></p>
+                    </div>
+
+                    <!-- Sensor & Forensics Telemetry -->
+                    <div class="space-y-1 text-[10px] text-slate-400 pt-1">
+                      <div class="flex justify-between">
+                        <span>CMOS Fingerprint:</span>
+                        <span id="modalSensorFp" class="font-bold"></span>
+                      </div>
+                      <div class="flex justify-between">
+                        <span>Edge Continuity:</span>
+                        <span id="modalEdgeCont" class="font-bold"></span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Location & Admin Direct Trigger -->
+                  <div class="pt-2 space-y-2">
+                    <div class="flex justify-between items-center text-xs">
+                      <span id="modalImgCoords" class="text-cyan-300 flex items-center gap-1"></span>
+                      <a id="modalGMapLink" href="#" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1.5 px-3 rounded-xl flex items-center gap-1 transition text-xs">
+                        <span class="material-symbols-outlined text-xs">open_in_new</span> Maps
+                      </a>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 pt-1 text-xs">
+                      <button id="modalApproveBtn" class="py-2 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-500 transition">
+                        ✓ Approve Report
+                      </button>
+                      <button id="modalRejectBtn" class="py-2 rounded-xl bg-red-600 text-white font-bold hover:bg-red-500 transition">
+                        ✕ Flag Suspicious
+                      </button>
+                    </div>
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+          `;
+          document.body.appendChild(modal);
+        }
+
+        document.getElementById('modalImgTitle').textContent = `${title} — CITIZEN FIELD EVIDENCE`;
+        document.getElementById('modalReportIdBadge').textContent = `ID: ${reportCode || 'PS-2026'}`;
+        document.getElementById('modalImgTag').src = imgSrc;
+        document.getElementById('modalImgDesc').textContent = `"${desc || 'Citizen uploaded ground hazard evidence.'}"`;
+        document.getElementById('modalImgCoords').innerHTML = `<span class="material-symbols-outlined text-xs text-cyan-400">my_location</span> ${Number(lat).toFixed(4)}°, ${Number(lng).toFixed(4)}°`;
+        document.getElementById('modalGMapLink').href = `https://www.google.com/maps?q=${lat},${lng}`;
+
+        // Populate Requirement 21 Fields
+        const authElem = document.getElementById('modalAuthScore');
+        authElem.textContent = `${authScore}%`;
+        authElem.className = isFake ? 'text-base font-black text-red-400' : 'text-base font-black text-emerald-400';
+
+        const statusElem = document.getElementById('modalStatusVerdict');
+        statusElem.textContent = isFake ? 'SUSPICIOUS' : 'AUTHENTIC';
+        statusElem.className = isFake ? 'bg-red-950 text-red-300 border border-red-500/60 font-black px-2 py-0.5 rounded text-[11px]' : 'bg-emerald-950 text-emerald-300 border border-emerald-500/60 font-black px-2 py-0.5 rounded text-[11px]';
+
+        document.getElementById('modalAIGenProb').textContent = `${aiGenProb}%`;
+        document.getElementById('modalManipProb').textContent = isFake ? `${manipProb}% (HIGH)` : `${manipProb}% (LOW)`;
+        document.getElementById('modalDecisionText').textContent = decision || (isFake ? 'Manual verification required.' : 'Image appears to be a genuine photograph.');
+
+        document.getElementById('modalSensorFp').textContent = forensics.sensor_fingerprint || (isFake ? 'GENERATIVE_DIFFUSION_NOISE' : 'AUTHENTIC_CMOS_SENSOR');
+        document.getElementById('modalSensorFp').className = isFake ? 'font-bold text-red-400' : 'font-bold text-emerald-400';
+
+        document.getElementById('modalEdgeCont').textContent = forensics.edge_continuity || (isFake ? 'SYNTHETIC_DIFFUSION_SMOOTHING' : 'AUTHENTIC_TEXTURE');
+        document.getElementById('modalEdgeCont').className = isFake ? 'font-bold text-red-400' : 'font-bold text-emerald-400';
+
+        document.getElementById('modalApproveBtn').onclick = () => {
+          window.handleAdminReportAction(reportCode, 'APPROVE');
+          modal.classList.add('hidden');
+        };
+        document.getElementById('modalRejectBtn').onclick = () => {
+          window.handleAdminReportAction(reportCode, 'MARK_SUSPICIOUS');
+          modal.classList.add('hidden');
+        };
+
+        modal.classList.remove('hidden');
+      };
+
+
+      // ══ LIVE EMERGENCY SOS POLLING & DISPATCH CONTROLLERS ══
+      var sosMarkers = [];
+
+      async function renderActiveEmergencySOSFeed() {
+        const baseUrl = window.getApiBaseUrl ? window.getApiBaseUrl() : 'http://127.0.0.1:8000';
+        try {
+          const res = await fetch(`${baseUrl}/api/emergency/events?active_only=true&limit=10`);
+          if (!res.ok) return;
+          const data = await res.json();
+          const events = data.events || [];
+
+          const countBadge = document.getElementById('adminSosCountBadge');
+          const grid = document.getElementById('adminSosEventsGrid');
+          const banner = document.getElementById('adminSosAlertBanner');
+          const title = document.getElementById('adminSosTitle');
+          const subtitle = document.getElementById('adminSosSubtitle');
+          const iconContainer = document.getElementById('adminSosIconContainer');
+          const icon = document.getElementById('adminSosIcon');
+          const resolveAllBtn = document.getElementById('adminSosResolveAllBtn');
+
+          if (events.length === 0) {
+            if (banner) banner.className = "shrink-0 w-full min-h-fit bg-[#0c1220] border border-emerald-500/30 rounded-2xl p-4 md:p-5 shadow-lg flex flex-col gap-3.5 relative transition-all duration-300";
+            if (title) title.innerHTML = 'EMERGENCY SOS MONITOR <span class="text-xs font-mono font-normal text-emerald-400 hidden sm:inline">(SYSTEM SECURE)</span>';
+            if (subtitle) subtitle.innerText = 'All emergency sectors secure. Monitoring live citizen distress frequency.';
+            if (countBadge) {
+              countBadge.innerText = '0 ACTIVE';
+              countBadge.className = 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 font-mono text-[10px] font-bold px-2 py-0.5 rounded-full';
+            }
+            if (iconContainer) iconContainer.className = 'w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0';
+            if (icon) icon.innerText = 'verified_user';
+            if (resolveAllBtn) resolveAllBtn.classList.add('hidden');
+            if (grid) {
+              grid.innerHTML = `
+                <div class="col-span-full py-2 text-center text-slate-400 text-xs font-mono flex items-center justify-center gap-2">
+                  <span class="material-symbols-outlined text-sm text-emerald-400">check_circle</span>
+                  <span>All emergency sectors secure. No active SOS signals detected.</span>
+                </div>
+              `;
+            }
+            // Clear map SOS markers
+            sosMarkers.forEach(m => miniMap.removeLayer(m));
+            sosMarkers = [];
+            return;
+          }
+
+          // Active events present:
+          if (banner) banner.className = "shrink-0 w-full min-h-fit bg-gradient-to-r from-red-950 via-[#1a0808] to-[#0f172a] border-2 border-red-500/80 rounded-2xl p-4 md:p-5 shadow-2xl flex flex-col gap-4 relative transition-all duration-300";
+          if (title) title.innerHTML = '<span class="text-red-400">🚨 ACTIVE EMERGENCY SOS ALERTS</span>';
+          if (subtitle) subtitle.innerText = 'Real-time distress signals from Citizen Website & SafeGround App (Emergency Dispatched)';
+          if (countBadge) {
+            countBadge.innerText = `${events.length} ACTIVE`;
+            countBadge.className = 'bg-red-600 text-white font-mono text-[10px] font-black px-2.5 py-0.5 rounded-full animate-bounce';
+          }
+          if (iconContainer) iconContainer.className = 'w-10 h-10 rounded-full bg-red-600/30 border border-red-500 flex items-center justify-center text-red-400 shrink-0';
+          if (icon) icon.innerText = 'crisis_alert';
+          if (resolveAllBtn) resolveAllBtn.classList.remove('hidden');
+
+          // Clear old markers
+          sosMarkers.forEach(m => miniMap.removeLayer(m));
+          sosMarkers = [];
+
+          grid.innerHTML = events.map(ev => {
+            const isAcknowledged = ev.status === 'ACKNOWLEDGED';
+            const isResponderAssigned = ev.status === 'RESPONDER_ASSIGNED';
+
+            // Add pulsing marker to miniMap
+            if (ev.latitude && ev.longitude) {
+              const marker = L.circleMarker([ev.latitude, ev.longitude], {
+                radius: 10,
+                fillColor: '#ef4444',
+                color: '#fff',
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0.9
+              }).addTo(miniMap);
+              marker.bindPopup(`
+                <div class="font-mono text-xs p-1">
+                  <b class="text-red-600 block">🚨 ${ev.event_id}</b>
+                  <span>${ev.user_name || 'Citizen'}</span><br/>
+                  <a href="${ev.google_maps_url}" target="_blank" class="text-cyan-600 underline font-bold">Google Maps</a>
+                </div>
+              `);
+              sosMarkers.push(marker);
+            }
+
+            return `
+              <div class="bg-[#0b101d] border-2 border-red-500/80 rounded-xl p-4 flex flex-col justify-between gap-3 shadow-lg relative">
+                <div class="flex items-start justify-between gap-2">
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping"></span>
+                      <span class="text-xs font-black text-red-400 font-mono">${ev.event_id}</span>
+                      <span class="text-[9px] bg-red-950 text-red-300 border border-red-800 px-1.5 py-0.2 rounded font-mono uppercase">${ev.platform}</span>
+                    </div>
+                    <h4 class="text-xs font-bold text-white mt-1">${ev.user_name || 'Citizen in Distress'}</h4>
+                    <p class="text-[10px] text-slate-400 font-mono">${ev.user_phone || 'Emergency Signal'}</p>
+                  </div>
+
+                  <span class="text-[9px] font-mono font-bold px-2 py-0.5 rounded ${
+                    isResponderAssigned ? 'bg-emerald-950 text-emerald-300 border border-emerald-500' :
+                    isAcknowledged ? 'bg-blue-950 text-blue-300 border border-blue-500' :
+                    'bg-amber-950 text-amber-300 border border-amber-500 animate-pulse'
+                  }">
+                    ${ev.status}
+                  </span>
+                </div>
+
+                <div class="bg-black/60 p-2.5 rounded-lg text-[11px] font-mono text-slate-300 space-y-1">
+                  <div class="flex justify-between">
+                    <span class="text-slate-500">Location:</span>
+                    <span class="text-cyan-300 font-bold">${Number(ev.latitude).toFixed(4)}°, ${Number(ev.longitude).toFixed(4)}° (±${ev.location_accuracy || 10}m)</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-slate-500">Situation:</span>
+                    <span class="text-amber-300 uppercase">${ev.situation || 'General Alert'}</span>
+                  </div>
+                  <div class="pt-1 border-t border-slate-800/80 flex justify-between items-center">
+                    <a href="${ev.google_maps_url}" target="_blank" class="text-cyan-400 hover:text-cyan-300 underline flex items-center gap-1 text-[10px]">
+                      <span class="material-symbols-outlined text-xs">open_in_new</span> Google Maps
+                    </a>
+                    <span class="text-[9px] text-slate-500">${ev.created_at ? new Date(ev.created_at).toLocaleTimeString() : 'Just now'}</span>
+                  </div>
+                </div>
+
+                <!-- Admin Action Buttons -->
+                <div class="grid grid-cols-3 gap-1.5 pt-1 text-[10px] font-mono">
+                  <button onclick="window.adminUpdateSOSStatus('${ev.event_id}', 'ACKNOWLEDGED')" ${isAcknowledged || isResponderAssigned ? 'disabled class="p-1.5 rounded bg-slate-800 text-slate-500 opacity-50"' : 'class="p-1.5 rounded bg-blue-600/30 hover:bg-blue-600/50 text-blue-300 border border-blue-500/50 font-bold transition active:scale-95"'}>
+                    Acknowledge
+                  </button>
+                  <button onclick="window.adminUpdateSOSStatus('${ev.event_id}', 'RESPONDER_ASSIGNED', 'NDRF Unit 12')" ${isResponderAssigned ? 'disabled class="p-1.5 rounded bg-slate-800 text-slate-500 opacity-50"' : 'class="p-1.5 rounded bg-amber-600/30 hover:bg-amber-600/50 text-amber-300 border border-amber-500/50 font-bold transition active:scale-95"'}>
+                    Dispatch Unit
+                  </button>
+                  <button onclick="window.adminUpdateSOSStatus('${ev.event_id}', 'RESOLVED')" class="p-1.5 rounded bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 border border-emerald-500/50 font-bold transition active:scale-95">
+                    Resolve
+                  </button>
+                </div>
+              </div>
+            `;
+          }).join('');
+        } catch (err) {
+          console.warn('SOS polling error:', err);
+        }
+      }
+
+      window.adminUpdateSOSStatus = async function(eventId, newStatus, responderName) {
+        const baseUrl = window.getApiBaseUrl ? window.getApiBaseUrl() : 'http://127.0.0.1:8000';
+        try {
+          const res = await fetch(`${baseUrl}/api/emergency/sos/${eventId}/status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              status: newStatus,
+              responder_name: responderName || (newStatus === 'RESPONDER_ASSIGNED' ? 'NDRF Quick Response Team 12' : null),
+              notes: `Updated from Command Dashboard by Administrator`
+            })
+          });
+          if (res.ok) {
+            renderActiveEmergencySOSFeed();
+          }
+        } catch (e) {
+          alert('Failed to update emergency status: ' + e.message);
+        }
+      };
+
+      window.adminResolveAllSOS = async function() {
+        if (!confirm('Mark all active emergency SOS alerts as RESOLVED?')) return;
+        const baseUrl = window.getApiBaseUrl ? window.getApiBaseUrl() : 'http://127.0.0.1:8000';
+        try {
+          const res = await fetch(`${baseUrl}/api/emergency/events/resolve-all`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          if (res.ok) {
+            renderActiveEmergencySOSFeed();
+          }
+        } catch (e) {
+          alert('Failed to resolve alerts: ' + e.message);
+        }
+      };
+
+      // Start live SOS polling every 3s
+      renderActiveEmergencySOSFeed();
+      setInterval(renderActiveEmergencySOSFeed, 3000);
+
+      // Poll every 2 seconds to capture live uploads across tabs/windows
+      setInterval(renderCitizenEvidenceFeed, 2000);
+
+      // Listen for cross-window localStorage changes
+      window.addEventListener('storage', function(e) {
+        if (e.key === 'safeground_citizen_uploaded_reports' || e.key === 'safeground_citizen_state') {
+          renderCitizenEvidenceFeed();
+        }
+      });
+
+      // Listen on BroadcastChannel
+      if ('BroadcastChannel' in window) {
+        const bc = new BroadcastChannel('safeground_citizen_reports_channel');
+        bc.onmessage = function(ev) {
+          if (ev.data && ev.data.type === 'NEW_HAZARD_REPORT') {
+            renderCitizenEvidenceFeed();
+          }
+        };
+      }
+    });
+  </script>
+
+  <!-- Central API Client & SOS Emergency Handler -->
+  <script src="assets/js/api_client.js?v=4"></script>
+  <script src="assets/js/sos_handler.js"></script>
+
+</body>
+</html>

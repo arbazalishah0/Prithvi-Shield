@@ -1,0 +1,11 @@
+{
+  "voice_title": "PRITHVI-SHIELD AI Voice Assistant",
+  "tap_to_speak": "Tap to Speak",
+  "listening": "Listening to voice stream...",
+  "processing": "Processing AI reasoning...",
+  "calculating_route": "Calculating route & distance...",
+  "speaking": "Speaking response...",
+  "error": "Microphone or voice connection error",
+  "confirm_report": "Confirm & Structurize into Report",
+  "sample_phrase": "Simulate Another Voice Statement"
+}

@@ -1,0 +1,12 @@
+{
+  "appId": "com.prithvishield.citizen",
+  "appName": "PRITHVI-SHIELD",
+  "webDir": "dist",
+  "plugins": {
+    "StatusBar": {
+      "overlaysWebView": false,
+      "style": "DARK",
+      "backgroundColor": "#090d16"
+    }
+  }
+}

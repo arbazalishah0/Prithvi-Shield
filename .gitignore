@@ -1,0 +1,41 @@
+# Node dependencies
+node_modules/
+App for citizen/node_modules/
+prahari_website/node_modules/
+
+# Python Virtual Environments
+venv/
+.venv/
+env/
+AI egine model/venv/
+NER-Landslide-AI/venv/
+Real-time-3D-City-Digital-Twin/venv/
+deepfakeimage/venv/
+xgboost/venv/
+__pycache__/
+*.pyc
+
+# Environment variables
+.env
+.env.local
+*.env
+
+# Build outputs & artifacts
+dist/
+App for citizen/dist/
+build/
+*.apk
+*.zip
+
+# IDE & OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Datasets and Large Model Files / Databases
+new_dataset3/
+*.pt
+*.db
+*.pkl
+

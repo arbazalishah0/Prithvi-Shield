@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html class="h-full dark" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>Emergency Alert Center — PRITHVI-SHIELD / PRAHARI Command (SIH 2026)</title>
+  
+  <!-- Google Fonts & Material Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "dark-bg": "#070a11",
+            "dark-surface": "#0d1322",
+            "dark-panel": "#111827",
+            "dark-card": "#0f172a",
+            "dark-border": "#1e293b",
+            "dark-border-light": "#334155",
+            "tactical-gold": "#f59e0b",
+            "tactical-gold-hover": "#fbbf24",
+            "tactical-cyan": "#00e5ff",
+            "tactical-cyan-dark": "#0284c7",
+            "tactical-salmon": "#f87171",
+            "tactical-salmon-dark": "#ef4444",
+            "tactical-pink": "#fb7185",
+            "primary": "#000a1e",
+            "primary-container": "#002147",
+            "secondary": "#b6171e",
+            "secondary-container": "#da3433"
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: #090d16;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 4px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+      background: #00e5ff;
+    }
+    .pulse-danger {
+      animation: pulseRed 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulseRed {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: .75; transform: scale(1.02); }
+    }
+  </style>
+
+  <!-- Load API Client -->
+  <script src="assets/js/api_client.js?v=5"></script>
+  <!-- Real-Time Emergency Alerts & Universal Slide-Bar Drawer -->
+  <script src="assets/js/live_emergency_alerts.js"></script>
+  <script src="assets/js/nav_sidebar.js"></script>
+</head>
+
+<body class="bg-dark-bg text-slate-100 min-h-screen flex flex-col font-sans select-none overflow-x-hidden selection:bg-cyan-500 selection:text-slate-950">
+
+  <!-- ══ TOP GLOBAL NAVIGATION BAR ══ -->
+  <nav class="fixed top-0 w-full z-50 h-14 bg-[#070a11]/95 backdrop-blur-md border-b border-dark-border px-4 sm:px-6 flex items-center justify-between shadow-md flex-nowrap whitespace-nowrap overflow-x-hidden">
+    <div class="flex items-center gap-3 shrink-0 flex-nowrap">
+      <button onclick="window.prahariToggleSidebar()" class="prahari-slidebar-toggle-btn" title="Open Command Slide-Bar (Ctrl+B)">
+        <span class="material-symbols-outlined text-sm">menu</span>
+        <span class="text-xs font-black tracking-wide uppercase">MENU</span>
+      </button>
+
+      <a href="index.html" class="flex items-center gap-2 group shrink-0">
+        <img src="assets/logo.jpg" alt="PRITHVI-SHIELD Logo" class="w-8 h-8 object-contain rounded-lg border border-cyan-400/40 group-hover:scale-105 transition-transform" />
+        <div class="flex flex-col leading-tight">
+          <span class="font-extrabold text-sm tracking-tight text-white flex items-center gap-1">
+            PRITHVI-SHIELD <span class="text-cyan-400 font-bold">Command</span>
+          </span>
+          <span class="text-[9px] font-mono text-tactical-gold tracking-widest uppercase">EMERGENCY BROADCAST MATRIX</span>
+        </div>
+      </a>
+    </div>
+
+    <!-- Main Navigation Links -->
+    <div class="hidden lg:flex items-center gap-1 text-xs font-semibold text-slate-300 flex-nowrap whitespace-nowrap">
+      <a class="hover:text-white hover:bg-slate-800/60 transition px-2.5 py-1.5 rounded" href="index.html">Home</a>
+      <a class="hover:text-white hover:bg-slate-800/60 transition px-2.5 py-1.5 rounded" href="dashboard.html">Dashboard</a>
+      <a class="hover:text-cyan-400 hover:bg-slate-800/60 transition px-2.5 py-1.5 rounded" href="gis_map.html">GIS Maps</a>
+      <a class="hover:text-purple-400 hover:bg-slate-800/60 transition px-2.5 py-1.5 rounded" href="ai_risk_engine.html">AI Risk Engine</a>
+      <a class="hover:text-white hover:bg-slate-800/60 transition px-2.5 py-1.5 rounded" href="digital_twin.html">3D Digital Twin</a>
+      <a class="text-red-400 font-bold bg-red-950/60 border border-red-500/40 px-2.5 py-1.5 rounded shadow-sm shadow-red-500/10 flex items-center gap-1" href="alert_center.html">
+        <span class="material-symbols-outlined text-xs text-red-400 animate-pulse">campaign</span> Alert Center
+      </a>
+      <a class="hover:text-amber-300 hover:bg-slate-800/60 transition px-2.5 py-1.5 rounded flex items-center gap-1" href="evacuation_rescue.html">
+        <span class="material-symbols-outlined text-xs text-amber-400">directions_run</span> Evacuation
+      </a>
+      <a class="hover:text-emerald-400 hover:bg-slate-800/60 transition px-2.5 py-1.5 rounded" href="citizen_safety.html">Citizen Safety</a>
+    </div>
+
+    <div class="flex items-center gap-2.5 shrink-0 flex-nowrap">
+      <div id="backend-status-badge" class="hidden sm:flex items-center gap-2 px-2.5 py-1 bg-slate-900 border border-slate-800 rounded-lg text-xs font-mono">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span class="text-slate-300 text-[11px]">FCM Engine: ONLINE</span>
+      </div>
+      <a href="early_warning.html" class="bg-[#f87171] hover:bg-[#ef4444] text-slate-950 font-black text-xs px-3 py-1.5 rounded-lg flex items-center gap-1 uppercase tracking-wider transition shadow-md shadow-red-500/30">
+        <span class="material-symbols-outlined text-sm">notifications_active</span> SOS DESK
+      </a>
+    </div>
+  </nav>
+
+  <!-- ══ MAIN DASHBOARD CONTAINER ══ -->
+  <main class="flex-grow pt-16 pb-12 px-4 sm:px-8 max-w-7xl mx-auto w-full flex flex-col gap-6">
+    
+    <!-- Header Title & Analytics Summary Ribbon -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-[#0d1322] p-6 rounded-2xl border border-dark-border shadow-xl">
+      <div>
+        <div class="inline-flex items-center gap-2 bg-[#070a12] px-3 py-0.5 rounded-full border border-red-500/30 mb-2">
+          <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+          <span class="text-[10px] font-mono font-bold text-red-400 uppercase tracking-widest">NATIONAL DISASTER BROADCAST MATRIX (FCM v1)</span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2.5">
+          <span class="material-symbols-outlined text-red-500 text-3xl">notifications_active</span>
+          Emergency Alert Center
+        </h1>
+        <p class="text-xs text-slate-400 mt-1">Direct Admin-to-Citizen push notifications via Firebase Cloud Messaging for instant landslide early warnings &amp; evacuation orders.</p>
+      </div>
+
+      <!-- Quick Metrics -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full md:w-auto">
+        <div class="bg-[#070a12] p-3 rounded-xl border border-dark-border text-center min-w-[100px]">
+          <span class="text-[10px] font-mono text-slate-400 uppercase block">Total Alerts</span>
+          <span id="stat-total-alerts" class="text-lg font-black text-cyan-400 font-mono">18</span>
+        </div>
+        <div class="bg-[#070a12] p-3 rounded-xl border border-dark-border text-center min-w-[100px]">
+          <span class="text-[10px] font-mono text-slate-400 uppercase block">Active Critical</span>
+          <span id="stat-active-critical" class="text-lg font-black text-red-400 font-mono">2 Live</span>
+        </div>
+        <div class="bg-[#070a12] p-3 rounded-xl border border-dark-border text-center min-w-[100px]">
+          <span class="text-[10px] font-mono text-slate-400 uppercase block">FCM Devices</span>
+          <span id="stat-connected-devices" class="text-lg font-black text-emerald-400 font-mono">6 Connected</span>
+        </div>
+        <div class="bg-[#070a12] p-3 rounded-xl border border-dark-border text-center min-w-[100px]">
+          <span class="text-[10px] font-mono text-slate-400 uppercase block">Avg Delivery</span>
+          <span id="stat-avg-delivery" class="text-lg font-black text-tactical-gold font-mono">99.2%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ MAIN 2-COLUMN WORKSPACE ══ -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      
+      <!-- ══ LEFT COLUMN: ALERT COMPOSITION STUDIO (lg:col-span-7) ══ -->
+      <div class="lg:col-span-7 bg-[#0d1322] p-6 sm:p-8 rounded-2xl border border-dark-border shadow-xl flex flex-col gap-6">
+        
+        <div class="flex items-center justify-between border-b border-dark-border pb-4">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-cyan-400 text-xl">campaign</span>
+            <h2 class="text-lg font-bold text-white tracking-tight">Create Emergency Broadcast</h2>
+          </div>
+          <span class="text-[11px] font-mono text-slate-400 bg-[#070a12] px-2.5 py-1 rounded-md border border-dark-border">
+            Authority: <strong class="text-cyan-300">PRAHARI HQ</strong>
+          </span>
+        </div>
+
+        <!-- 1. Quick Template Presets -->
+        <div class="space-y-2">
+          <label class="text-xs font-mono font-bold text-slate-300 flex items-center justify-between">
+            <span>QUICK DISASTER TEMPLATES:</span>
+            <span class="text-[10px] text-cyan-400 font-normal">Click to auto-populate form</span>
+          </label>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <button onclick="loadTemplate('CRITICAL_LANDSLIDE')" class="bg-[#070a12] hover:bg-red-950/40 text-red-300 hover:text-red-200 border border-red-500/30 hover:border-red-500/60 p-2.5 rounded-xl text-left text-xs font-medium transition flex flex-col gap-1">
+              <span class="font-bold text-[11px] flex items-center gap-1">🚨 Landslide Warning</span>
+              <span class="text-[9px] text-slate-400">Critical slope rupture</span>
+            </button>
+            <button onclick="loadTemplate('HEAVY_RAINFALL')" class="bg-[#070a12] hover:bg-amber-950/40 text-amber-300 hover:text-amber-200 border border-amber-500/30 hover:border-amber-500/60 p-2.5 rounded-xl text-left text-xs font-medium transition flex flex-col gap-1">
+              <span class="font-bold text-[11px] flex items-center gap-1">🌧️ Heavy Rainfall</span>
+              <span class="text-[9px] text-slate-400">Precipitation surge</span>
+            </button>
+            <button onclick="loadTemplate('EVACUATION_NOTICE')" class="bg-[#070a12] hover:bg-purple-950/40 text-purple-300 hover:text-purple-200 border border-purple-500/30 hover:border-purple-500/60 p-2.5 rounded-xl text-left text-xs font-medium transition flex flex-col gap-1">
+              <span class="font-bold text-[11px] flex items-center gap-1">🏃 Evacuation Order</span>
+              <span class="text-[9px] text-slate-400">Immediate shelter move</span>
+            </button>
+            <button onclick="loadTemplate('ROAD_BLOCKAGE')" class="bg-[#070a12] hover:bg-sky-950/40 text-sky-300 hover:text-sky-200 border border-sky-500/30 hover:border-sky-500/60 p-2.5 rounded-xl text-left text-xs font-medium transition flex flex-col gap-1">
+              <span class="font-bold text-[11px] flex items-center gap-1">🚧 Road Blockage</span>
+              <span class="text-[9px] text-slate-400">Highway corridor shut</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. Alert Title -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-mono font-bold text-slate-300">ALERT TITLE *</label>
+          <input 
+            type="text" 
+            id="alert-title-input" 
+            placeholder="e.g. CRITICAL LANDSLIDE WARNING" 
+            value="CRITICAL LANDSLIDE WARNING" 
+            class="w-full bg-[#070a12] border border-cyan-500/40 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 rounded-xl px-4 py-2.5 text-sm text-white font-bold outline-none transition"
+          />
+        </div>
+
+        <!-- 3. Severity Level Selector Cards -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-mono font-bold text-slate-300 flex items-center justify-between">
+            <span>ALERT SEVERITY LEVEL *</span>
+            <span id="severity-priority-tag" class="text-[10px] font-mono text-red-400 font-bold">FCM Priority: MAXIMUM (Instant Sound/Vibrate)</span>
+          </label>
+          
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            <!-- LOW -->
+            <label class="cursor-pointer">
+              <input type="radio" name="severity-radio" value="LOW" class="sr-only peer" onchange="onSeverityChange('LOW')" />
+              <div class="p-3 rounded-xl border border-dark-border bg-[#070a12] peer-checked:bg-emerald-950/40 peer-checked:border-emerald-500 peer-checked:text-emerald-300 text-slate-400 transition flex flex-col gap-1 text-center">
+                <span class="text-xs font-black">LOW</span>
+                <span class="text-[9px] opacity-80">General Info</span>
+              </div>
+            </label>
+
+            <!-- MODERATE -->
+            <label class="cursor-pointer">
+              <input type="radio" name="severity-radio" value="MODERATE" class="sr-only peer" onchange="onSeverityChange('MODERATE')" />
+              <div class="p-3 rounded-xl border border-dark-border bg-[#070a12] peer-checked:bg-amber-950/40 peer-checked:border-amber-500 peer-checked:text-amber-300 text-slate-400 transition flex flex-col gap-1 text-center">
+                <span class="text-xs font-black">MODERATE</span>
+                <span class="text-[9px] opacity-80">Precautionary</span>
+              </div>
+            </label>
+
+            <!-- HIGH -->
+            <label class="cursor-pointer">
+              <input type="radio" name="severity-radio" value="HIGH" class="sr-only peer" onchange="onSeverityChange('HIGH')" />
+              <div class="p-3 rounded-xl border border-dark-border bg-[#070a12] peer-checked:bg-orange-950/40 peer-checked:border-orange-500 peer-checked:text-orange-300 text-slate-400 transition flex flex-col gap-1 text-center">
+                <span class="text-xs font-black">HIGH</span>
+                <span class="text-[9px] opacity-80">Urgent Warning</span>
+              </div>
+            </label>
+
+            <!-- CRITICAL -->
+            <label class="cursor-pointer">
+              <input type="radio" name="severity-radio" value="CRITICAL" checked class="sr-only peer" onchange="onSeverityChange('CRITICAL')" />
+              <div class="p-3 rounded-xl border border-dark-border bg-[#070a12] peer-checked:bg-red-950/60 peer-checked:border-red-500 peer-checked:text-red-300 text-slate-400 transition flex flex-col gap-1 text-center shadow-sm">
+                <span class="text-xs font-black flex items-center justify-center gap-1">
+                  <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span> CRITICAL
+                </span>
+                <span class="text-[9px] opacity-80">Immediate Danger</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- 4. Target Audience Options & Region -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          
+          <div class="space-y-1.5">
+            <label class="text-xs font-mono font-bold text-slate-300">TARGET AUDIENCE *</label>
+            <select id="target-type-select" onchange="onTargetTypeChange()" class="w-full bg-[#070a12] border border-dark-border focus:border-cyan-400 rounded-xl px-3.5 py-2.5 text-xs text-white font-mono outline-none">
+              <option value="REGION">SEND TO SELECTED REGION</option>
+              <option value="ALL">SEND TO ALL CITIZENS</option>
+              <option value="SELECTED_USERS">SEND TO SELECTED CITIZENS</option>
+            </select>
+          </div>
+
+          <div id="region-picker-box" class="space-y-1.5">
+            <label class="text-xs font-mono font-bold text-slate-300">AFFECTED REGION *</label>
+            <select id="target-region-select" class="w-full bg-[#070a12] border border-dark-border focus:border-cyan-400 rounded-xl px-3.5 py-2.5 text-xs text-white font-mono outline-none">
+              <option value="Kamrup / Guwahati">Assam: Kamrup / Guwahati Sector</option>
+              <option value="Dima Hasao / Haflong">Assam: Dima Hasao / Haflong Sector</option>
+              <option value="Chamoli / Joshimath">Uttarakhand: Chamoli / Joshimath Belt</option>
+              <option value="Wayanad / Meppadi">Kerala: Wayanad / Meppadi Escarpment</option>
+              <option value="Gangtok / North Sikkim">Sikkim: Gangtok / North Sikkim Highway</option>
+              <option value="Darjeeling / Kalimpong">West Bengal: Darjeeling / Kalimpong</option>
+              <option value="Shimla / Kinnaur">Himachal: Shimla / Kinnaur Pass</option>
+              <option value="Nilgiris / Ooty">Tamil Nadu: Nilgiris Escarpment</option>
+              <option value="All Regions">All India Monitored Zones (8.5k Nodes)</option>
+            </select>
+          </div>
+
+        </div>
+
+        <!-- 5. Interactive Citizen Multi-Selector (Appears when target_type == SELECTED_USERS) -->
+        <div id="citizen-multi-select-box" class="space-y-2 hidden">
+          <label class="text-xs font-mono font-bold text-slate-300 flex items-center justify-between">
+            <span>SELECT INDIVIDUAL CITIZENS:</span>
+            <span class="text-[10px] text-cyan-400 font-mono">FCM Tokens Linked</span>
+          </label>
+          <div id="citizen-checkbox-list" class="max-h-36 overflow-y-auto custom-scroll bg-[#070a12] border border-dark-border rounded-xl p-3 space-y-2 text-xs">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- 6. Language & Multilingual Selection -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-mono font-bold text-slate-300 flex items-center justify-between">
+            <span>BROADCAST LANGUAGE</span>
+            <span class="text-[10px] text-slate-400">Citizens receive based on profile preference</span>
+          </label>
+          <div class="grid grid-cols-4 gap-2">
+            <button type="button" onclick="setLanguage('English')" class="lang-btn bg-[#070a12] text-cyan-300 border border-cyan-400 py-1.5 rounded-lg text-xs font-mono font-bold text-center">English</button>
+            <button type="button" onclick="setLanguage('Hindi')" class="lang-btn bg-[#070a12] text-slate-300 border border-dark-border hover:border-cyan-400 py-1.5 rounded-lg text-xs font-mono font-bold text-center">Hindi (हिंदी)</button>
+            <button type="button" onclick="setLanguage('Assamese')" class="lang-btn bg-[#070a12] text-slate-300 border border-dark-border hover:border-cyan-400 py-1.5 rounded-lg text-xs font-mono font-bold text-center">Assamese (অসমীয়া)</button>
+            <button type="button" onclick="setLanguage('Bengali')" class="lang-btn bg-[#070a12] text-slate-300 border border-dark-border hover:border-cyan-400 py-1.5 rounded-lg text-xs font-mono font-bold text-center">Bengali (বাংলা)</button>
+          </div>
+        </div>
+
+        <!-- 7. Alert Message Content -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-mono font-bold text-slate-300 flex items-center justify-between">
+            <span>ALERT MESSAGE BODY *</span>
+            <span id="char-counter" class="text-[10px] font-mono text-slate-400">142 chars</span>
+          </label>
+          <textarea 
+            id="alert-message-input" 
+            rows="3" 
+            oninput="document.getElementById('char-counter').textContent = this.value.length + ' chars';"
+            class="w-full bg-[#070a12] border border-cyan-500/40 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 rounded-xl p-3.5 text-xs sm:text-sm text-slate-200 outline-none leading-relaxed transition"
+          >High landslide risk detected in your area due to torrential precipitation. Please avoid unstable slopes and follow immediate evacuation instructions.</textarea>
+        </div>
+
+        <!-- 8. Safety Instructions Checklist Builder -->
+        <div class="space-y-2">
+          <label class="text-xs font-mono font-bold text-slate-300 flex items-center justify-between">
+            <span>OFFICIAL CITIZEN SAFETY INSTRUCTIONS:</span>
+            <span class="text-[10px] text-cyan-400">Included in notification modal</span>
+          </label>
+          <div id="safety-checklist-container" class="space-y-2">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-xs text-amber-400">check_circle</span>
+              <input type="text" class="safety-item-input w-full bg-[#070a12] border border-dark-border rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none" value="Avoid travelling through active mountain slope corridors." />
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-xs text-amber-400">check_circle</span>
+              <input type="text" class="safety-item-input w-full bg-[#070a12] border border-dark-border rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none" value="Move towards designated evacuation shelters immediately." />
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-xs text-amber-400">check_circle</span>
+              <input type="text" class="safety-item-input w-full bg-[#070a12] border border-dark-border rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none" value="Follow instructions from NDRF battalions & district emergency teams." />
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Dispatch Buttons -->
+        <div class="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-dark-border">
+          <div class="flex items-center gap-2">
+            <button 
+              type="button" 
+              onclick="saveDraftAlert()" 
+              class="bg-[#070a12] hover:bg-slate-800 text-slate-300 border border-slate-700 font-mono font-bold text-xs px-4 py-3 rounded-xl transition flex items-center gap-1.5"
+            >
+              <span class="material-symbols-outlined text-sm">drafts</span> Save as Draft
+            </button>
+            <button 
+              type="button" 
+              onclick="resetAlertForm()" 
+              class="bg-transparent hover:bg-slate-800/40 text-slate-400 text-xs px-3 py-3 rounded-xl transition"
+            >
+              Reset
+            </button>
+          </div>
+
+          <button 
+            type="button" 
+            id="btn-send-alert" 
+            onclick="initiateSendAlert()" 
+            class="bg-gradient-to-r from-red-600 via-red-500 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-black text-xs sm:text-sm px-7 py-3.5 rounded-xl transition flex items-center gap-2 shadow-lg shadow-red-500/30 transform hover:-translate-y-0.5"
+          >
+            <span class="material-symbols-outlined text-base animate-pulse">send</span>
+            <span>SEND EMERGENCY ALERT</span>
+          </button>
+        </div>
+
+      </div>
+
+
+      <!-- ══ RIGHT COLUMN: AUDIT TRAIL, CITIZEN DEVICES & ANALYTICS (lg:col-span-5) ══ -->
+      <div class="lg:col-span-5 flex flex-col gap-6">
+        
+        <!-- Tab Navigation Switcher -->
+        <div class="bg-[#0d1322] p-1.5 rounded-2xl border border-dark-border grid grid-cols-2 gap-1 text-xs font-mono">
+          <button id="tab-btn-history" onclick="switchRightTab('history')" class="py-2 px-3 rounded-xl font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 transition flex items-center justify-center gap-1.5">
+            <span class="material-symbols-outlined text-sm">history</span> Alert History
+          </button>
+          <button id="tab-btn-devices" onclick="switchRightTab('devices')" class="py-2 px-3 rounded-xl font-bold text-slate-400 hover:text-white transition flex items-center justify-center gap-1.5">
+            <span class="material-symbols-outlined text-sm">phone_android</span> Citizen Devices
+          </button>
+        </div>
+
+        <!-- ══ TAB 1: BROADCAST HISTORY ══ -->
+        <div id="tab-content-history" class="bg-[#0d1322] p-6 rounded-2xl border border-dark-border shadow-xl flex flex-col gap-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-white tracking-tight flex items-center gap-2">
+              <span class="material-symbols-outlined text-cyan-400 text-base">history</span>
+              Alert Dispatch Audit Log
+            </h3>
+            <button onclick="loadAlertHistory()" class="text-[10px] font-mono text-cyan-400 hover:underline flex items-center gap-1">
+              <span class="material-symbols-outlined text-xs">refresh</span> Refresh
+            </button>
+          </div>
+
+          <!-- History Alert List -->
+          <div id="alert-history-list" class="flex flex-col gap-3 max-h-[560px] overflow-y-auto custom-scroll pr-1">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- ══ TAB 2: CITIZEN DEVICE REGISTRY (FCM TOKENS) ══ -->
+        <div id="tab-content-devices" class="bg-[#0d1322] p-6 rounded-2xl border border-dark-border shadow-xl flex flex-col gap-4 hidden">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-bold text-white tracking-tight flex items-center gap-2">
+                <span class="material-symbols-outlined text-emerald-400 text-base">phone_android</span>
+                Connected Citizen Devices
+              </h3>
+              <p class="text-[10px] text-slate-400 font-mono">Real-time FCM token heartbeat status</p>
+            </div>
+            <button onclick="seedDemoCitizens()" class="bg-cyan-950 text-cyan-300 border border-cyan-800 text-[10px] font-mono px-2.5 py-1 rounded-lg hover:bg-cyan-900 transition">
+              + Seed Demo Devices
+            </button>
+          </div>
+
+          <div id="citizen-devices-list" class="flex flex-col gap-3 max-h-[560px] overflow-y-auto custom-scroll pr-1">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- ══ 2-STEP CONFIRMATION MODAL FOR CRITICAL EMERGENCY ALERTS ══ -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <div id="confirm-modal" class="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
+    <div class="bg-[#0d1322] border-2 border-red-500 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-5 animate-scale-up">
+      
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-2xl bg-red-500/20 text-red-500 flex items-center justify-center shrink-0 border border-red-500/40">
+          <span class="material-symbols-outlined text-3xl animate-pulse">warning</span>
+        </div>
+        <div>
+          <span class="text-[10px] font-mono font-bold text-red-400 uppercase tracking-wider">AUTHORIZATION REQUIRED</span>
+          <h3 class="text-lg font-black text-white">Broadcast Critical Landslide Alert?</h3>
+        </div>
+      </div>
+
+      <p class="text-xs text-slate-300 leading-relaxed">
+        You are about to transmit a <strong class="text-red-400">CRITICAL PRIORITY</strong> emergency notification through Firebase Cloud Messaging. This will trigger audible sirens and override vibration settings on all registered citizen mobile devices in the target region.
+      </p>
+
+      <div class="bg-[#070a12] p-4 rounded-xl border border-dark-border space-y-2 text-xs font-mono">
+        <div class="flex justify-between text-slate-400">
+          <span>Target Region:</span>
+          <strong id="modal-confirm-region" class="text-white">Kamrup / Guwahati</strong>
+        </div>
+        <div class="flex justify-between text-slate-400">
+          <span>Severity / Priority:</span>
+          <strong id="modal-confirm-severity" class="text-red-400">CRITICAL / Maximum</strong>
+        </div>
+        <div class="flex justify-between text-slate-400">
+          <span>Targeted FCM Devices:</span>
+          <strong id="modal-confirm-recipients" class="text-cyan-400">All Registered Devices</strong>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button 
+          onclick="closeConfirmModal()" 
+          class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs px-4 py-2.5 rounded-xl transition"
+        >
+          Cancel
+        </button>
+        <button 
+          id="modal-confirm-btn" 
+          onclick="executeSendAlertConfirmed()" 
+          class="bg-red-600 hover:bg-red-500 text-white font-black font-mono text-xs px-6 py-2.5 rounded-xl transition flex items-center gap-1.5 shadow-lg shadow-red-500/40"
+        >
+          <span class="material-symbols-outlined text-sm">send</span> AUTHORIZE &amp; TRANSMIT
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- ══ SCRIPT: ALERT CENTER CONTROLLER & API SYNCHRONIZATION ══ -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <script>
+    var currentSeverity = "CRITICAL";
+    var currentLanguage = "English";
+    var registeredCitizensCache = [];
+    var pendingAlertPayload = null;
+
+    // Template Definitions
+    var TEMPLATES = {
+      "CRITICAL_LANDSLIDE": {
+        title: "CRITICAL LANDSLIDE WARNING",
+        severity: "CRITICAL",
+        message: "High landslide risk detected near slopes due to torrential 145mm precipitation. Please avoid unstable slopes and follow immediate evacuation instructions.",
+        instructions: [
+          "Avoid travelling through active mountain slope corridors.",
+          "Move towards designated evacuation shelters immediately.",
+          "Follow instructions from NDRF battalions & district emergency teams."
+        ]
+      },
+      "HEAVY_RAINFALL": {
+        title: "HEAVY RAINFALL ADVISORY",
+        severity: "HIGH",
+        message: "Extreme precipitation predicted over hill roads. Please remain alert and avoid non-essential mountain transit.",
+        instructions: [
+          "Do not cross swollen river channels.",
+          "Stay away from identified high-susceptibility hazard zones.",
+          "Report surface ground fissures to PRAHARI hotline 1077."
+        ]
+      },
+      "EVACUATION_NOTICE": {
+        title: "IMMEDIATE EVACUATION NOTICE",
+        severity: "CRITICAL",
+        message: "Residents in the affected sector are requested to move towards designated safe shelters immediately.",
+        instructions: [
+          "Proceed immediately to your nearest Community Relief Shelter.",
+          "Carry essential medical supplies, ID cards, and drinking water.",
+          "Assist elderly individuals and children during transit."
+        ]
+      },
+      "ROAD_BLOCKAGE": {
+        title: "HAZARD: MOUNTAIN HIGHWAY DEBRIS BLOCKAGE",
+        severity: "MODERATE",
+        message: "Debris slump has blocked NH-54 corridor. Clearance teams are active. Use alternative safety routes displayed in application.",
+        instructions: [
+          "Do not attempt to navigate through debris zone.",
+          "Follow alternative safe routes in PRAHARI SafeRoute map.",
+          "Maintain clear radio frequency on emergency channel 108."
+        ]
+      }
+    };
+
+    function loadTemplate(key) {
+      var t = TEMPLATES[key];
+      if (!t) return;
+      document.getElementById('alert-title-input').value = t.title;
+      document.getElementById('alert-message-input').value = t.message;
+      document.getElementById('char-counter').textContent = t.message.length + ' chars';
+
+      // Set severity
+      var radios = document.getElementsByName('severity-radio');
+      for (var i = 0; i < radios.length; i++) {
+        radios[i].checked = (radios[i].value === t.severity);
+      }
+      onSeverityChange(t.severity);
+
+      // Set instructions
+      var container = document.getElementById('safety-checklist-container');
+      container.innerHTML = t.instructions.map(function(item) {
+        return '<div class="flex items-center gap-2">' +
+               '<span class="material-symbols-outlined text-xs text-amber-400">check_circle</span>' +
+               '<input type="text" class="safety-item-input w-full bg-[#070a12] border border-dark-border rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none" value="' + item + '" />' +
+               '</div>';
+      }).join('');
+    }
+
+    function onSeverityChange(sev) {
+      currentSeverity = sev;
+      var tag = document.getElementById('severity-priority-tag');
+      if (sev === 'CRITICAL') {
+        tag.textContent = 'FCM Priority: MAXIMUM (Instant Sound/Vibrate)';
+        tag.className = 'text-[10px] font-mono text-red-400 font-bold';
+      } else if (sev === 'HIGH') {
+        tag.textContent = 'FCM Priority: HIGH (Audible Alert Tone)';
+        tag.className = 'text-[10px] font-mono text-orange-400 font-bold';
+      } else {
+        tag.textContent = 'FCM Priority: NORMAL (Standard In-App Banner)';
+        tag.className = 'text-[10px] font-mono text-emerald-400 font-bold';
+      }
+    }
+
+    function onTargetTypeChange() {
+      var val = document.getElementById('target-type-select').value;
+      var regionBox = document.getElementById('region-picker-box');
+      var citizenBox = document.getElementById('citizen-multi-select-box');
+
+      if (val === 'REGION') {
+        regionBox.classList.remove('hidden');
+        citizenBox.classList.add('hidden');
+      } else if (val === 'ALL') {
+        regionBox.classList.add('hidden');
+        citizenBox.classList.add('hidden');
+      } else if (val === 'SELECTED_USERS') {
+        regionBox.classList.add('hidden');
+        citizenBox.classList.remove('hidden');
+      }
+    }
+
+    function setLanguage(lang) {
+      currentLanguage = lang;
+      var btns = document.querySelectorAll('.lang-btn');
+      btns.forEach(function(b) {
+        if (b.textContent.indexOf(lang) !== -1) {
+          b.className = 'lang-btn bg-[#070a12] text-cyan-300 border border-cyan-400 py-1.5 rounded-lg text-xs font-mono font-bold text-center';
+        } else {
+          b.className = 'lang-btn bg-[#070a12] text-slate-300 border border-dark-border hover:border-cyan-400 py-1.5 rounded-lg text-xs font-mono font-bold text-center';
+        }
+      });
+    }
+
+    function switchRightTab(tab) {
+      var btnHist = document.getElementById('tab-btn-history');
+      var btnDev = document.getElementById('tab-btn-devices');
+      var contHist = document.getElementById('tab-content-history');
+      var contDev = document.getElementById('tab-content-devices');
+
+      if (tab === 'history') {
+        btnHist.className = 'py-2 px-3 rounded-xl font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 transition flex items-center justify-center gap-1.5';
+        btnDev.className = 'py-2 px-3 rounded-xl font-bold text-slate-400 hover:text-white transition flex items-center justify-center gap-1.5';
+        contHist.classList.remove('hidden');
+        contDev.classList.add('hidden');
+      } else {
+        btnDev.className = 'py-2 px-3 rounded-xl font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 transition flex items-center justify-center gap-1.5';
+        btnHist.className = 'py-2 px-3 rounded-xl font-bold text-slate-400 hover:text-white transition flex items-center justify-center gap-1.5';
+        contDev.classList.remove('hidden');
+        contHist.classList.add('hidden');
+      }
+    }
+
+    // Load Connected Citizens & Devices
+    async function loadCitizensList() {
+      try {
+        var res = await fetch('http://127.0.0.1:8000/api/citizens');
+        if (res.ok) {
+          var data = await res.json();
+          registeredCitizensCache = data.citizens || [];
+          renderCitizensUI();
+          return;
+        }
+      } catch (e) {
+        console.warn('Backend offline, using seed cache', e);
+      }
+      // Fallback
+      registeredCitizensCache = [
+        { user_id: 'citizen_001', name: 'Arunav Baruah', email: 'arunav.b@assam.gov.in', region: 'Kamrup / Guwahati', preferred_language: 'Assamese', platform: 'android', fcm_token: 'fcm_token_arunav_active' },
+        { user_id: 'citizen_002', name: 'Dipika Saikia', email: 'dipika.s@gmail.com', region: 'Dima Hasao / Haflong', preferred_language: 'Assamese', platform: 'android', fcm_token: 'fcm_token_dipika_active' },
+        { user_id: 'citizen_003', name: 'Rajesh Sharma', email: 'rajesh.s@uk.gov.in', region: 'Chamoli / Joshimath', preferred_language: 'Hindi', platform: 'android', fcm_token: 'fcm_token_rajesh_active' },
+        { user_id: 'citizen_004', name: 'Ananya Nair', email: 'ananya.n@kerala.gov.in', region: 'Wayanad / Meppadi', preferred_language: 'English', platform: 'ios', fcm_token: 'fcm_token_ananya_active' },
+        { user_id: 'citizen_005', name: 'Tashi Lepcha', email: 'tashi.l@sikkim.gov.in', region: 'Gangtok / North Sikkim', preferred_language: 'English', platform: 'android', fcm_token: 'fcm_token_tashi_active' },
+        { user_id: 'citizen_006', name: 'Subhashish Das', email: 'subhashish.d@wb.gov.in', region: 'Darjeeling / Kalimpong', preferred_language: 'Bengali', platform: 'web', fcm_token: 'fcm_token_subhashish_active' }
+      ];
+      renderCitizensUI();
+    }
+
+    function renderCitizensUI() {
+      document.getElementById('stat-connected-devices').textContent = registeredCitizensCache.length + ' Connected';
+
+      // Render Multi-select Checkbox List
+      var checkList = document.getElementById('citizen-checkbox-list');
+      if (checkList) {
+        checkList.innerHTML = registeredCitizensCache.map(function(c) {
+          return '<label class="flex items-center justify-between p-2 rounded-lg bg-[#0d1322] border border-dark-border cursor-pointer hover:border-cyan-500/40">' +
+                 '<div class="flex items-center gap-2">' +
+                 '<input type="checkbox" value="' + c.user_id + '" class="citizen-chk accent-cyan-400 rounded" checked />' +
+                 '<span class="font-bold text-white">' + c.name + '</span>' +
+                 '<span class="text-[10px] text-slate-400">(' + c.region + ')</span>' +
+                 '</div>' +
+                 '<span class="text-[9px] font-mono bg-cyan-950 text-cyan-300 border border-cyan-800 px-1.5 py-0.5 rounded">' + c.preferred_language + '</span>' +
+                 '</label>';
+        }).join('');
+      }
+
+      // Render Tab 2 Device Registry
+      var devList = document.getElementById('citizen-devices-list');
+      if (devList) {
+        devList.innerHTML = registeredCitizensCache.map(function(c) {
+          return '<div class="bg-[#070a12] p-3 rounded-xl border border-dark-border flex items-center justify-between gap-2">' +
+                 '<div class="flex items-center gap-2.5">' +
+                 '<div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">' +
+                 '<span class="material-symbols-outlined text-base">phone_android</span>' +
+                 '</div>' +
+                 '<div>' +
+                 '<div class="font-bold text-xs text-white">' + c.name + '</div>' +
+                 '<div class="text-[10px] text-slate-400 font-mono">' + c.region + ' &bull; ' + c.preferred_language + '</div>' +
+                 '</div>' +
+                 '</div>' +
+                 '<button onclick="sendTestPing(\'' + c.user_id + '\', \'' + c.name + '\')" class="bg-slate-800 hover:bg-cyan-950 text-cyan-300 border border-dark-border hover:border-cyan-400 px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold transition">' +
+                 'Test Ping' +
+                 '</button>' +
+                 '</div>';
+        }).join('');
+      }
+    }
+
+    // Load Alert History
+    async function loadAlertHistory() {
+      var container = document.getElementById('alert-history-list');
+      try {
+        var res = await fetch('http://127.0.0.1:8000/api/alerts');
+        if (res.ok) {
+          var data = await res.json();
+          renderHistoryUI(data.alerts || []);
+          return;
+        }
+      } catch (e) {
+        console.warn('Backend offline, using local store', e);
+      }
+
+      // Fallback local alerts
+      var localAlerts = [
+        {
+          alert_code: "ALT-2026-001",
+          title: "CRITICAL LANDSLIDE WARNING",
+          severity: "CRITICAL",
+          target_region: "Kamrup / Guwahati",
+          status: "DELIVERED",
+          delivered: 1180,
+          total_targeted: 1245,
+          sent_at: "Today &bull; 06:30 PM"
+        },
+        {
+          alert_code: "ALT-2026-002",
+          title: "HEAVY RAINFALL ADVISORY",
+          severity: "HIGH",
+          target_region: "Wayanad / Meppadi",
+          status: "SENT",
+          delivered: 3390,
+          total_targeted: 3420,
+          sent_at: "Today &bull; 10:00 AM"
+        }
+      ];
+      renderHistoryUI(localAlerts);
+    }
+
+    function renderHistoryUI(alerts) {
+      document.getElementById('stat-total-alerts').textContent = alerts.length;
+      var criticalCount = alerts.filter(function(a) { return a.severity === 'CRITICAL'; }).length;
+      document.getElementById('stat-active-critical').textContent = criticalCount + ' Live';
+
+      var container = document.getElementById('alert-history-list');
+      if (!container) return;
+
+      container.innerHTML = alerts.map(function(a) {
+        var sevBg = a.severity === 'CRITICAL' ? 'bg-red-500/20 text-red-400 border-red-500/40' :
+                    a.severity === 'HIGH' ? 'bg-orange-500/20 text-orange-400 border-orange-500/40' :
+                    a.severity === 'MODERATE' ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40';
+
+        var statusBg = a.status === 'DELIVERED' ? 'text-emerald-400 bg-emerald-950/60 border-emerald-500/30' :
+                       a.status === 'SENT' ? 'text-cyan-400 bg-cyan-950/60 border-cyan-500/30' : 'text-slate-400 bg-slate-900 border-slate-700';
+
+        var timeStr = a.sent_at ? (a.sent_at.indexOf('T') !== -1 ? new Date(a.sent_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : a.sent_at) : 'Draft';
+
+        return '<div class="bg-[#070a12] p-4 rounded-xl border border-dark-border hover:border-cyan-500/40 transition space-y-2">' +
+               '<div class="flex justify-between items-start">' +
+               '<div class="flex items-center gap-2">' +
+               '<span class="text-[9px] font-mono px-2 py-0.5 rounded-full font-bold border ' + sevBg + '">' + a.severity + '</span>' +
+               '<span class="text-[10px] font-mono text-slate-400">' + a.alert_code + '</span>' +
+               '</div>' +
+               '<span class="text-[9px] font-mono font-bold px-2 py-0.5 rounded-md border ' + statusBg + '">' + a.status + '</span>' +
+               '</div>' +
+               '<h4 class="font-bold text-xs text-white">' + a.title + '</h4>' +
+               '<div class="flex justify-between text-[10px] font-mono text-slate-400 border-t border-dark-border/60 pt-2">' +
+               '<span>📍 ' + (a.target_region || 'All Regions') + '</span>' +
+               '<span>👥 ' + (a.delivered || a.total_targeted || 1245) + ' Citizens</span>' +
+               '<span>🕒 ' + timeStr + '</span>' +
+               '</div>' +
+               '</div>';
+      }).join('');
+    }
+
+    // Initiate Send Alert Workflow
+    function initiateSendAlert() {
+      var title = document.getElementById('alert-title-input').value.trim();
+      var message = document.getElementById('alert-message-input').value.trim();
+      var targetType = document.getElementById('target-type-select').value;
+      var region = document.getElementById('target-region-select').value;
+
+      if (!title || !message) {
+        alert('Please fill out both the Alert Title and Alert Message.');
+        return;
+      }
+
+      // Collect Safety Instructions
+      var instructionInputs = document.querySelectorAll('.safety-item-input');
+      var instructions = [];
+      instructionInputs.forEach(function(inp) {
+        if (inp.value.trim()) instructions.push(inp.value.trim());
+      });
+
+      // Collect Selected Citizen IDs if applicable
+      var selectedUsers = [];
+      if (targetType === 'SELECTED_USERS') {
+        var chks = document.querySelectorAll('.citizen-chk:checked');
+        chks.forEach(function(c) { selectedUsers.push(c.value); });
+      }
+
+      pendingAlertPayload = {
+        title: title,
+        message: message,
+        severity: currentSeverity,
+        target_type: targetType,
+        target_region: region,
+        target_user_ids: selectedUsers,
+        language: currentLanguage,
+        safety_instructions: instructions,
+        created_by: "PRAHARI Command State HQ",
+        is_draft: false
+      };
+
+      // If CRITICAL severity, show 2-Step Confirmation Modal
+      if (currentSeverity === 'CRITICAL') {
+        document.getElementById('modal-confirm-region').textContent = (targetType === 'ALL') ? 'All India Monitored Regions' : region;
+        document.getElementById('modal-confirm-severity').textContent = currentSeverity + ' (Maximum Priority)';
+        document.getElementById('modal-confirm-recipients').textContent = (targetType === 'ALL') ? '100% Connected Citizens' : 'Target Region Mobile App Users';
+        document.getElementById('confirm-modal').classList.remove('hidden');
+      } else {
+        executeSendAlert(pendingAlertPayload);
+      }
+    }
+
+    function closeConfirmModal() {
+      document.getElementById('confirm-modal').classList.add('hidden');
+    }
+
+    function executeSendAlertConfirmed() {
+      closeConfirmModal();
+      if (pendingAlertPayload) {
+        executeSendAlert(pendingAlertPayload);
+      }
+    }
+
+    async function executeSendAlert(payload) {
+      var btn = document.getElementById('btn-send-alert');
+      var originalText = btn.innerHTML;
+      btn.innerHTML = '<span class="material-symbols-outlined text-base animate-spin">refresh</span> <span>TRANSMITTING VIA FCM...</span>';
+      btn.disabled = true;
+
+      try {
+        var res = await fetch('http://127.0.0.1:8000/api/alerts/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          var data = await res.json();
+          alert('🚨 EMERGENCY ALERT TRANSMITTED SUCCESSFULLY!\n\nAlert Code: ' + data.alert_code + '\nSeverity: ' + data.severity + '\nTargeted Citizens: ' + data.total_targeted + '\nFCM Status: SENT / DELIVERED');
+          loadAlertHistory();
+          return;
+        }
+      } catch (e) {
+        console.warn('Backend dispatch fallback simulation', e);
+      } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }
+
+      // Offline simulation fallback
+      alert('🚨 EMERGENCY ALERT BROADCAST SIMULATION DISPATCHED!\n\nPayload sent to connected Citizen FCM instances.\nNotification active on Citizen Mobile App.');
+      loadAlertHistory();
+    }
+
+    async function saveDraftAlert() {
+      var title = document.getElementById('alert-title-input').value.trim();
+      var message = document.getElementById('alert-message-input').value.trim();
+      var targetType = document.getElementById('target-type-select').value;
+      var region = document.getElementById('target-region-select').value;
+
+      var payload = {
+        title: title,
+        message: message,
+        severity: currentSeverity,
+        target_type: targetType,
+        target_region: region,
+        language: currentLanguage,
+        is_draft: true
+      };
+
+      try {
+        await fetch('http://127.0.0.1:8000/api/alerts/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } catch (e) {}
+
+      alert('💾 Alert saved as DRAFT in dispatch queue.');
+      loadAlertHistory();
+    }
+
+    function resetAlertForm() {
+      loadTemplate('CRITICAL_LANDSLIDE');
+    }
+
+    async function sendTestPing(uid, name) {
+      alert('📡 Test FCM Ping sent to ' + name + ' (' + uid + ')!\nDevice Status: Active (Latency: 28ms)');
+    }
+
+    async function seedDemoCitizens() {
+      try {
+        await fetch('http://127.0.0.1:8000/api/citizens/seed', { method: 'POST' });
+        loadCitizensList();
+        alert('Seeded demo hazard region citizens and FCM tokens!');
+      } catch (e) {
+        alert('Seeded demo device tokens locally.');
+      }
+    }
+
+    window.addEventListener('load', function() {
+      loadCitizensList();
+      loadAlertHistory();
+    });
+  </script>
+
+</body>
+</html>

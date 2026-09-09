@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">PRITHVI-SHIELD</string>
+    <string name="title_activity_main">PRITHVI-SHIELD</string>
+    <string name="package_name">com.prithvishield.citizen</string>
+    <string name="custom_url_scheme">com.prithvishield.citizen</string>
+</resources>
