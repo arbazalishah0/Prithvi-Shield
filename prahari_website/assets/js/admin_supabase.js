@@ -1,10 +1,11 @@
 // PRITHVI-SHIELD Admin Dashboard Supabase Controller
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.8/+esm';
 
-const SUPABASE_URL = window.ENV?.SUPABASE_URL || 'https://xyzcompany.supabase.co';
-const SUPABASE_ANON_KEY = window.ENV?.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy_anon_key';
+const SUPABASE_URL = window.ENV?.SUPABASE_URL;
+const SUPABASE_ANON_KEY = window.ENV?.SUPABASE_ANON_KEY;
+const hasSupabaseConfig = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
-export const adminSupabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+export const adminSupabase = hasSupabaseConfig ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
 export async function fetchDashboardStats() {
   try {
@@ -96,6 +97,7 @@ export async function fetchLiveCitizenPlaces() {
 }
 
 export async function fetchLiveHazardReports() {
+  if (!adminSupabase) return [];
   try {
     const { data, error } = await adminSupabase
       .from('hazard_reports')
@@ -114,30 +116,25 @@ export async function fetchLiveHazardReports() {
 }
 
 export function subscribeToHazardRealtime(onUpdateCallback) {
+  if (!adminSupabase) {
+    console.warn('[REALTIME] Supabase configuration missing; API polling fallback is active.');
+    return null;
+  }
   try {
     const channel = adminSupabase
       .channel('prithvi-shield-realtime-channel')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'reports' },
-        (payload) => {
-          console.log('⚡ [SUPABASE REALTIME] New incident report event:', payload);
-          if (typeof onUpdateCallback === 'function') onUpdateCallback(payload);
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'hazard_reports' },
+        { event: 'INSERT', schema: 'public', table: 'hazard_reports' },
         (payload) => {
           console.log('⚡ [SUPABASE REALTIME] Hazard report change:', payload);
           if (typeof onUpdateCallback === 'function') onUpdateCallback(payload);
         }
       )
-      .subscribe();
+      .subscribe((status) => console.log(`[REALTIME] ${status}`));
     return channel;
   } catch (err) {
     console.warn('Supabase Realtime channel subscription note:', err);
     return null;
   }
 }
-

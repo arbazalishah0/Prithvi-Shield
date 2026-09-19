@@ -1,11 +1,19 @@
 import { store } from '../store.js';
 import { renderTopBar, renderBottomNav, bindNavigationEvents } from '../components/Navigation.js';
+import { locationService } from '../services/locationService.js';
 
 export function renderHomeView() {
   const { areaStatus, currentLocation, hazards, notifications } = store.state;
 
+  const coordsFormatted = locationService.formatCoordinates(currentLocation.lat, currentLocation.lng);
+  const isAcquiring = currentLocation.status === 'ACQUIRING';
+  const isPermissionDenied = currentLocation.status === 'PERMISSION_DENIED';
+  const isServicesDisabled = currentLocation.status === 'SERVICES_DISABLED';
+  const isUnavailable = currentLocation.status === 'UNAVAILABLE' || (!currentLocation.lat && !isAcquiring && !isPermissionDenied && !isServicesDisabled);
+  const isSuccess = currentLocation.status === 'SUCCESS' && currentLocation.lat !== null && currentLocation.lng !== null;
+
   return `
-    <div class="flex-1 flex flex-col bg-surface text-on-surface min-h-screen pb-nav-safe overflow-y-auto">
+    <div class="app-content flex-1 flex flex-col bg-surface text-on-surface min-h-screen pb-nav-safe overflow-y-auto">
       ${renderTopBar('Prithvi Shield', false, true)}
 
       <main class="px-4 pt-4 flex flex-col gap-5 max-w-xl mx-auto w-full">
@@ -14,7 +22,7 @@ export function renderHomeView() {
           <div class="relative rounded-[24px] p-5 bg-gradient-to-br from-[#090d16] via-[#0d1322] to-[#111827] text-white border border-cyan-500/30 shadow-xl overflow-hidden flex items-center gap-4">
             <div class="relative shrink-0">
               <div class="absolute inset-0 rounded-2xl bg-cyan-500/20 blur-md animate-pulse"></div>
-              <img src="/logo.jpg" alt="PRITHVI-SHIELD Logo" class="relative z-10 w-16 h-16 object-contain rounded-xl border border-cyan-400/40 shadow-lg" />
+              <img src="/logo.jpg" alt="PRITHVI-SHIELD Logo" class="relative z-10 w-16 h-16 object-contain rounded-xl border border-cyan-400/40 shadow-lg" onerror="this.src='/icons/icon-192.png'" />
             </div>
 
             <div class="flex flex-col gap-1 z-10 flex-1">
@@ -50,32 +58,136 @@ export function renderHomeView() {
           </div>
         </section>
 
-        <!-- Current Location Section -->
+        <!-- Real Android GPS Device Location Section (No Fake Locations / No Embedded Map Image) -->
         <section>
-          <div class="bg-surface-container-lowest rounded-[20px] p-4 shadow-sm border border-outline-variant/60 flex items-center justify-between gap-3">
-            <div class="flex items-start gap-3 flex-1">
-              <div class="w-11 h-11 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
-                <span class="material-symbols-outlined text-[22px]" style="font-variation-settings: 'FILL' 1;">my_location</span>
+          <div class="bg-surface-container-lowest rounded-[20px] p-4 shadow-sm border border-outline-variant/60 flex flex-col gap-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-[20px]">near_me</span>
+                <span class="text-xs font-extrabold uppercase tracking-wider text-on-surface-variant">Device GPS Telemetry</span>
               </div>
-              <div class="flex flex-col">
-                <span class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Your Live Coordinates</span>
-                <p class="text-base font-bold text-on-surface leading-tight mt-0.5">${currentLocation.lat.toFixed(4)}° N, ${Math.abs(currentLocation.lng).toFixed(4)}° W</p>
-                <div class="flex items-center gap-1.5 text-primary text-xs mt-1">
-                  <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-                  <span class="font-semibold">${currentLocation.placeName} • ±${currentLocation.accuracy}m</span>
-                </div>
-              </div>
+              ${isSuccess ? `
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Live GPS
+                </span>
+              ` : isAcquiring ? `
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                  <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-spin"></span>
+                  Acquiring
+                </span>
+              ` : `
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300">
+                  <span class="material-symbols-outlined text-[12px]">error</span>
+                  Unavailable
+                </span>
+              `}
             </div>
 
-            <!-- Mini Map Preview Button -->
-            <button id="home-open-map-btn" class="relative group shrink-0 rounded-xl overflow-hidden border border-outline-variant hover:ring-2 hover:ring-primary transition-all">
-              <img class="w-[72px] h-[72px] object-cover group-hover:scale-105 transition-transform" 
-                   src="https://lh3.googleusercontent.com/aida-public/AB6AXuAbUb7cZhLo-RSn8pI5WSlRLmUkKEJ-SzO2phgaktqvlW2lA-hB1ro4jfD9uFRWxPTxmin5Lpem-XC0kkiCWOvJcCI4iaqj6TH_PGVEyews9dNlB6gTlfqH7de3ZY02P1xpj7xGyPHdQgL7xqzqEqsQaJ8zP5HxyChreFviwKc3vFOLfbP0Eh3LbpeD_qsUOiUP9PO0w7FyKQZ7c83uOj0asn-C2w0b4IF3N7GY7imTMoZ8PlzFXcbDeQ" 
-                   alt="Mini Map" />
-              <div class="absolute inset-0 bg-primary/20 flex items-center justify-center">
-                <span class="material-symbols-outlined text-white text-[20px] drop-shadow">open_in_new</span>
+            ${isSuccess ? `
+              <!-- SUCCESS STATE: REAL GPS COORDINATES -->
+              <div class="flex items-start justify-between gap-3">
+                <div class="flex items-start gap-3 flex-1">
+                  <div class="w-11 h-11 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+                    <span class="material-symbols-outlined text-[22px]" style="font-variation-settings: 'FILL' 1;">my_location</span>
+                  </div>
+                  <div class="flex flex-col">
+                    <p class="text-base font-black text-on-surface leading-tight font-mono tracking-tight">${coordsFormatted.fullText}</p>
+                    <p class="text-xs font-semibold text-primary mt-1 flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[14px]">location_on</span>
+                      <span>${currentLocation.placeName}</span>
+                    </p>
+                    <div class="flex items-center gap-2 mt-1 text-[11px] text-on-surface-variant font-medium">
+                      <span>Accuracy: ±${currentLocation.accuracy || 5}m</span>
+                      ${currentLocation.elevation && currentLocation.elevation !== '--' ? `<span>• Elev: ${currentLocation.elevation}</span>` : ''}
+                      ${currentLocation.soilMoisture && currentLocation.soilMoisture !== '--' ? `<span>• Soil: ${currentLocation.soilMoisture}</span>` : ''}
+                    </div>
+                  </div>
+                </div>
+
+                <button id="home-refresh-location-btn" title="Refresh GPS" class="p-2 rounded-xl border border-outline-variant/60 hover:bg-surface-container-high transition text-on-surface-variant shrink-0 cursor-pointer">
+                  <span class="material-symbols-outlined text-[18px]">sync</span>
+                </button>
               </div>
-            </button>
+
+              <!-- Action CTA: Dedicated View Live Map Button -->
+              <div class="pt-2 border-t border-outline-variant/40 flex items-center justify-between">
+                <span class="text-xs text-on-surface-variant font-medium">Interactive hazard radar & shelters</span>
+                <button id="home-open-map-btn" class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-on-primary font-bold text-xs shadow hover:bg-primary/90 active:scale-95 transition-all cursor-pointer">
+                  <span class="material-symbols-outlined text-[16px]">map</span>
+                  View Live Map
+                </button>
+              </div>
+            ` : isAcquiring ? `
+              <!-- ACQUIRING STATE -->
+              <div class="p-4 rounded-xl bg-surface-container-low border border-outline-variant/40 flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin shrink-0"></div>
+                <div class="flex flex-col flex-1">
+                  <span class="text-sm font-bold text-on-surface">Acquiring your location...</span>
+                  <span class="text-xs text-on-surface-variant">Connecting to device GPS satellites</span>
+                </div>
+              </div>
+            ` : isPermissionDenied ? `
+              <!-- PERMISSION DENIED STATE -->
+              <div class="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col gap-2">
+                <div class="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-bold text-sm">
+                  <span class="material-symbols-outlined text-[20px]">location_disabled</span>
+                  <span>Location Permission Required</span>
+                </div>
+                <p class="text-xs text-on-surface-variant leading-relaxed">
+                  Prithvi-Shield needs location access to alert you of localized landslide risks, calculate safe evacuation routes, and dispatch emergency SOS.
+                </p>
+                <div class="flex gap-2 mt-1">
+                  <button id="home-enable-location-btn" class="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow transition active:scale-95 flex items-center gap-1.5 cursor-pointer">
+                    <span class="material-symbols-outlined text-[16px]">verified_user</span>
+                    Enable Location
+                  </button>
+                  <button id="home-open-map-btn" class="px-3 py-2 rounded-xl border border-outline-variant text-on-surface font-semibold text-xs hover:bg-surface-container-high transition cursor-pointer">
+                    Open Map Anyway
+                  </button>
+                </div>
+              </div>
+            ` : isServicesDisabled ? `
+              <!-- SERVICES DISABLED (GPS OFF) STATE -->
+              <div class="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 flex flex-col gap-2">
+                <div class="flex items-center gap-2 text-rose-700 dark:text-rose-400 font-bold text-sm">
+                  <span class="material-symbols-outlined text-[20px]">location_off</span>
+                  <span>Location Services Turned Off</span>
+                </div>
+                <p class="text-xs text-on-surface-variant leading-relaxed">
+                  Your device GPS / Location Services appear to be turned off. Please enable GPS in device settings for accurate disaster alerts.
+                </p>
+                <div class="flex gap-2 mt-1">
+                  <button id="home-retry-location-btn" class="px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-on-primary font-bold text-xs shadow transition active:scale-95 flex items-center gap-1.5 cursor-pointer">
+                    <span class="material-symbols-outlined text-[16px]">refresh</span>
+                    Retry GPS Connection
+                  </button>
+                  <button id="home-open-map-btn" class="px-3 py-2 rounded-xl border border-outline-variant text-on-surface font-semibold text-xs hover:bg-surface-container-high transition cursor-pointer">
+                    Open Map
+                  </button>
+                </div>
+              </div>
+            ` : `
+              <!-- UNAVAILABLE / TIMEOUT STATE -->
+              <div class="p-4 rounded-xl bg-surface-container-low border border-outline-variant/40 flex flex-col gap-2">
+                <div class="flex items-center gap-2 text-on-surface font-bold text-sm">
+                  <span class="material-symbols-outlined text-[20px] text-on-surface-variant">sync_problem</span>
+                  <span>Unable to Acquire GPS Position</span>
+                </div>
+                <p class="text-xs text-on-surface-variant leading-relaxed">
+                  ${currentLocation.error || 'Could not acquire satellite fix. Check your connection or move near an open sky.'}
+                </p>
+                <div class="flex gap-2 mt-1">
+                  <button id="home-retry-location-btn" class="px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-on-primary font-bold text-xs shadow transition active:scale-95 flex items-center gap-1.5 cursor-pointer">
+                    <span class="material-symbols-outlined text-[16px]">refresh</span>
+                    Retry Location
+                  </button>
+                  <button id="home-open-map-btn" class="px-3 py-2 rounded-xl border border-outline-variant text-on-surface font-semibold text-xs hover:bg-surface-container-high transition cursor-pointer">
+                    Open Map
+                  </button>
+                </div>
+              </div>
+            `}
           </div>
         </section>
 
@@ -229,6 +341,34 @@ export function bindHomeEvents(container) {
 
   const viewMapLink = container.querySelector('#home-view-map-link');
   if (viewMapLink) viewMapLink.addEventListener('click', () => store.navigate('map'));
+
+  // Location Actions
+  const enableLocationBtn = container.querySelector('#home-enable-location-btn');
+  if (enableLocationBtn) {
+    enableLocationBtn.addEventListener('click', async () => {
+      enableLocationBtn.disabled = true;
+      enableLocationBtn.textContent = 'Requesting...';
+      await store.requestAndEnableLocation();
+    });
+  }
+
+  const retryLocationBtn = container.querySelector('#home-retry-location-btn');
+  if (retryLocationBtn) {
+    retryLocationBtn.addEventListener('click', async () => {
+      retryLocationBtn.disabled = true;
+      retryLocationBtn.textContent = 'Retrying...';
+      await store.refreshLocation();
+    });
+  }
+
+  const refreshLocationBtn = container.querySelector('#home-refresh-location-btn');
+  if (refreshLocationBtn) {
+    refreshLocationBtn.addEventListener('click', async () => {
+      refreshLocationBtn.classList.add('animate-spin');
+      await store.refreshLocation();
+      refreshLocationBtn.classList.remove('animate-spin');
+    });
+  }
 
   // Safety Protocol Modal
   const guideBtn = container.querySelector('#quick-action-guide');

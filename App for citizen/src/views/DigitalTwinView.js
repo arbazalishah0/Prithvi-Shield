@@ -1,5 +1,6 @@
 import { store } from '../store.js';
 import { renderBottomNav, bindNavigationEvents } from '../components/Navigation.js';
+import { locationService } from '../services/locationService.js';
 
 export function renderDigitalTwinView() {
   const { twinTelemetry, hazards } = store.state;
@@ -67,8 +68,8 @@ export function renderDigitalTwinView() {
             <div id="twin-sector-card" class="bg-slate-900/95 text-white backdrop-blur-md rounded-2xl p-4 border border-slate-800 shadow-2xl flex flex-col gap-3 transition-all duration-300">
               <div class="flex justify-between items-start border-b border-slate-800 pb-2">
                 <div>
-                  <h3 id="twin-sector-title" class="text-sm font-bold text-white leading-tight">Sector 4 - Western Ridge</h3>
-                  <span id="twin-sector-subtitle" class="text-[10px] text-slate-400 font-mono">Lat: 34.0522°, Lng: -118.2437°</span>
+                  <h3 id="twin-sector-title" class="text-sm font-bold text-white leading-tight">Sector GIS Radar</h3>
+                  <span id="twin-sector-subtitle" class="text-[10px] text-slate-400 font-mono">${store.state.currentLocation.lat ? locationService.formatCoordinates(store.state.currentLocation.lat, store.state.currentLocation.lng).fullText : 'Locating GPS Sector...'}</span>
                 </div>
                 <span id="twin-sector-risk-badge" class="bg-red-500/20 text-red-400 border border-red-500/30 text-[10px] px-2.5 py-0.5 rounded-full font-extrabold uppercase">
                   HIGH RISK (78%)
@@ -125,10 +126,13 @@ export function bindDigitalTwinEvents(container) {
   import('leaflet').then((L) => {
     const { currentLocation, hazards } = store.state;
 
+    const baseLat = currentLocation.lat || 11.5580;
+    const baseLng = currentLocation.lng || 76.1310;
+
     const gisMap = L.map(mapElement, {
       zoomControl: false,
       attributionControl: false
-    }).setView([currentLocation.lat, currentLocation.lng], 14);
+    }).setView([baseLat, baseLng], 14);
 
     // Google Maps Satellite / Hybrid tiles for Digital Twin GIS
     L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
@@ -139,10 +143,10 @@ export function bindDigitalTwinEvents(container) {
 
     // GIS Heatmap Circles (RED, ORANGE, YELLOW, GREEN)
     const riskSectors = [
-      { lat: currentLocation.lat + 0.003, lng: currentLocation.lng - 0.002, color: '#ef4444', risk: 'CRITICAL', score: '92%', rain: '145mm', slope: '38°', reports: 5, name: 'Sector 1 - Red Slope Zone' },
-      { lat: currentLocation.lat - 0.002, lng: currentLocation.lng + 0.003, color: '#f97316', risk: 'HIGH', score: '78%', rain: '120mm', slope: '35°', reports: 4, name: 'Sector 4 - Western Ridge' },
-      { lat: currentLocation.lat + 0.005, lng: currentLocation.lng + 0.004, color: '#eab308', risk: 'MODERATE', score: '54%', rain: '85mm', slope: '22°', reports: 1, name: 'Sector 2 - East Slope' },
-      { lat: currentLocation.lat - 0.004, lng: currentLocation.lng - 0.003, color: '#10b981', risk: 'LOW', score: '18%', rain: '20mm', slope: '12°', reports: 0, name: 'Sector 3 - Valley Floor (Safe Zone)' }
+      { lat: baseLat + 0.003, lng: baseLng - 0.002, color: '#ef4444', risk: 'CRITICAL', score: '92%', rain: '145mm', slope: '38°', reports: 5, name: 'Sector 1 - Red Slope Zone' },
+      { lat: baseLat - 0.002, lng: baseLng + 0.003, color: '#f97316', risk: 'HIGH', score: '78%', rain: '120mm', slope: '35°', reports: 4, name: 'Sector 4 - Western Ridge' },
+      { lat: baseLat + 0.005, lng: baseLng + 0.004, color: '#eab308', risk: 'MODERATE', score: '54%', rain: '85mm', slope: '22°', reports: 1, name: 'Sector 2 - East Slope' },
+      { lat: baseLat - 0.004, lng: baseLng - 0.003, color: '#10b981', risk: 'LOW', score: '18%', rain: '20mm', slope: '12°', reports: 0, name: 'Sector 3 - Valley Floor (Safe Zone)' }
     ];
 
     riskSectors.forEach(sec => {

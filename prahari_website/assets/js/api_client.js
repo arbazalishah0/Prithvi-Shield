@@ -4,6 +4,8 @@
  */
 
 window.getApiBaseUrl = function() {
+  // Deployment configuration is the cross-device source of truth.
+  if (window.ENV?.API_BASE_URL) return window.ENV.API_BASE_URL.replace(/\/$/, "");
   // 1. Explicit override from query param
   const urlParams = new URLSearchParams(window.location.search);
   const paramUrl = urlParams.get("api_url") || urlParams.get("backend_url");
@@ -18,7 +20,7 @@ window.getApiBaseUrl = function() {
   // 2. Resolve hostname from current window
   const host = (window.location && window.location.hostname) ? window.location.hostname : "";
   
-  // If running locally, on file protocol, or on LAN
+  // Local development only. Production dashboards must provide ENV.API_BASE_URL.
   if (!host || host === "localhost" || host === "127.0.0.1" || host === "[::]" || host === "") {
     return "http://127.0.0.1:8000";
   }
@@ -383,4 +385,3 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   });
 });
-

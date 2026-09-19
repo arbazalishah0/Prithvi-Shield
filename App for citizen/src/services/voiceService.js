@@ -8,7 +8,7 @@ export class VoiceAssistantManager {
   constructor() {
     this.state = 'IDLE'; // IDLE | CONNECTING | LISTENING | THINKING | SPEAKING | ERROR | DISCONNECTED
     this.listeners = [];
-    this.continuousMode = true; // Enables hands-free back-and-forth conversation
+    this.continuousMode = false; // Enabled only during active mic dialog
   }
 
   onStateChange(callback) {
@@ -20,7 +20,7 @@ export class VoiceAssistantManager {
     this.listeners.forEach(cb => cb(this.state));
   }
 
-  speakText(text) {
+  speakText(text, enableContinuous = false) {
     const lang = i18n.getEffectiveLanguage();
 
     const ok = speechService.speak(
@@ -29,8 +29,7 @@ export class VoiceAssistantManager {
       () => this.setState('SPEAKING'),
       () => {
         this.setState('IDLE');
-        // Hands-Free Continuous Conversation Loop
-        if (this.continuousMode) {
+        if (enableContinuous && this.continuousMode) {
           setTimeout(() => {
             this.startSession();
           }, 800);
@@ -45,8 +44,13 @@ export class VoiceAssistantManager {
 
   async startSession(userId = null) {
     try {
+      this.continuousMode = true;
       this.setState('CONNECTING');
       const lang = i18n.getEffectiveLanguage();
+
+      // Reset previous transcript for new turn
+      store.state.voiceAssistant.transcript = '';
+      store.notify();
 
       const ok = speechService.startListening(
         lang,
@@ -55,21 +59,36 @@ export class VoiceAssistantManager {
           store.notify();
         },
         async () => {
-          if (this.state === 'LISTENING') {
+          const finalPrompt = (store.state.voiceAssistant.transcript || '').trim();
+          if (finalPrompt.length > 0) {
             this.setState('THINKING');
-            const finalPrompt = store.state.voiceAssistant.transcript;
-            if (finalPrompt && finalPrompt.trim().length > 0) {
+            try {
               const response = await sendAIChatMessage(finalPrompt);
-              const textToSpeak = response.message || "Route calculation complete.";
-              this.speakText(textToSpeak);
-            } else {
+              const textToSpeak = response.message || "Stay alert for rumbling sounds or sudden water runoff. Avoid steep slopes during heavy rainfall.";
+
+              // Update Chat History in the UI
+              if (typeof window !== 'undefined' && typeof window._addVoiceChatMessage === 'function') {
+                window._addVoiceChatMessage(finalPrompt, textToSpeak);
+              }
+
+              this.speakText(textToSpeak, false);
+            } catch (err) {
+              console.error('[Voice Assistant AI Error]:', err);
               this.setState('IDLE');
             }
+          } else {
+            this.setState('IDLE');
           }
         },
         (err) => {
           console.warn('[Voice STT Error]', err);
-          this.setState('ERROR');
+          if (err?.code === 'PERMISSION_DENIED') {
+            this.setState('PERMISSION_DENIED');
+          } else if (err?.code === 'UNSUPPORTED') {
+            this.setState('UNSUPPORTED');
+          } else {
+            this.setState('ERROR');
+          }
         }
       );
 
@@ -77,10 +96,12 @@ export class VoiceAssistantManager {
         this.setState('LISTENING');
         return { success: true, mode: 'stt' };
       } else {
-        setTimeout(() => {
-          this.setState('LISTENING');
-        }, 800);
-        return { success: true, mode: 'fallback' };
+        if (!speechService.isRecognitionSupported()) {
+          this.setState('UNSUPPORTED');
+        } else {
+          this.setState('ERROR');
+        }
+        return { success: false, mode: 'unsupported' };
       }
 
     } catch (err) {
@@ -93,8 +114,7 @@ export class VoiceAssistantManager {
   stopSession() {
     this.continuousMode = false;
     speechService.stopListening();
-    speechService.stopSpeaking();
-    this.setState('IDLE');
+    this.setState('STOPPED');
   }
 }
 

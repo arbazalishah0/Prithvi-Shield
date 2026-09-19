@@ -1,11 +1,10 @@
 import L from 'leaflet';
 import { store } from '../store.js';
+import { requireApiBaseUrl } from '../services/apiConfig.js';
 import { renderTopBar, renderBottomNav, bindNavigationEvents } from '../components/Navigation.js';
 
 let routeMapInstance = null;
 let currentEvacRouteData = null;
-
-const API_BASE = "http://127.0.0.1:8000";
 
 export function renderSafeRouteView() {
   const { currentLocation, shelters } = store.state;
@@ -118,6 +117,9 @@ export function bindSafeRouteEvents(container) {
   const { currentLocation, shelters } = store.state;
   let targetShelter = shelters[0] || { name: 'Gangtok Relief Camp', lat: 27.3245, lng: 88.6180 };
 
+  const userLat = currentLocation.lat || 11.5580;
+  const userLng = currentLocation.lng || 76.1310;
+
   // Initialize Map
   const mapElem = container.querySelector('#safe-route-map');
   if (!mapElem) return;
@@ -130,7 +132,7 @@ export function bindSafeRouteEvents(container) {
   routeMapInstance = L.map(mapElem, {
     zoomControl: false,
     attributionControl: false
-  }).setView([currentLocation.lat, currentLocation.lng], 13);
+  }).setView([userLat, userLng], 13);
 
   L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
     maxZoom: 20,
@@ -150,7 +152,7 @@ export function bindSafeRouteEvents(container) {
     iconSize: [28, 28],
     iconAnchor: [14, 14]
   });
-  L.marker([currentLocation.lat, currentLocation.lng], { icon: userIcon }).addTo(routeMapInstance);
+  L.marker([userLat, userLng], { icon: userIcon }).addTo(routeMapInstance);
 
   // Target Shelter Marker
   const shelterIcon = L.divIcon({
@@ -181,12 +183,12 @@ export function bindSafeRouteEvents(container) {
   // Fetch Dynamic AI Evacuation Route from FastAPI Backend
   async function fetchLiveRoute() {
     try {
-      const res = await fetch(`${API_BASE}/api/evacuation/calculate`, {
+      const res = await fetch(`${requireApiBaseUrl()}/api/evacuation/calculate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          latitude: currentLocation.lat,
-          longitude: currentLocation.lng,
+          latitude: userLat,
+          longitude: userLng,
           user_id: store.state.user?.id || 'citizen_mobile'
         })
       });
@@ -222,9 +224,9 @@ export function bindSafeRouteEvents(container) {
     } catch (err) {
       console.warn("Backend offline, using local topological path fallback:", err);
       const fallbackCoords = [
-        [currentLocation.lat, currentLocation.lng],
-        [currentLocation.lat + 0.003, currentLocation.lng + 0.004],
-        [currentLocation.lat + 0.007, currentLocation.lng + 0.009],
+        [userLat, userLng],
+        [userLat + 0.003, userLng + 0.004],
+        [userLat + 0.007, userLng + 0.009],
         [targetShelter.lat, targetShelter.lng]
       ];
       drawRoute(fallbackCoords, '#10b981');

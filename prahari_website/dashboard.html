@@ -619,6 +619,8 @@
 
   </div>
 
+  <script src="assets/js/runtime-config.js"></script>
+
   <!-- Script: Initialize Mini GIS Threat Map & Query Backend -->
   <script>
     var currentMarker = null;
@@ -742,19 +744,11 @@
             alert('Action failed: ' + (data.detail || data.message || 'Unknown error'));
           }
         } catch (err) {
-          console.warn('Backend action fallback:', err);
-          // Fallback update local storage item
-          const uploaded = JSON.parse(localStorage.getItem('safeground_citizen_uploaded_reports') || '[]');
-          const item = uploaded.find(r => r.report_id === reportId || r.id === reportId);
-          if (item) {
-            if (actionName === 'APPROVE') item.status = 'APPROVED';
-            else if (actionName === 'REJECT') item.status = 'REJECTED';
-            else if (actionName === 'MARK_SUSPICIOUS') item.status = 'SUSPICIOUS';
-            else if (actionName === 'REQUEST_MANUAL_VERIFICATION') item.status = 'ADMIN_REVIEW';
-            else if (actionName === 'CONVERT_TO_HAZARD_ALERT') item.status = 'APPROVED';
-            else if (actionName === 'SEND_EMERGENCY_NOTIFICATION') item.status = 'EMERGENCY_ALERT_SENT';
-            localStorage.setItem('safeground_citizen_uploaded_reports', JSON.stringify(uploaded));
-          }
+          console.error('[DASHBOARD] Cloud action failed:', err);
+          alert('Action was not saved because the cloud backend could not be reached. Please retry.');
+        }
+      };
+
       window.calculateDistanceMeters = function(lat1, lon1, lat2, lon2) {
         const R = 6371e3;
         const φ1 = lat1 * Math.PI / 180;
@@ -868,7 +862,8 @@
           try {
             const { fetchLiveCitizenPlaces } = await import('./assets/js/admin_supabase.js');
             const dbPlaces = await fetchLiveCitizenPlaces();
-            if (dbPlaces && dbPlaces.length > 0) {
+            // Places are not citizen incident reports; never use them as report data.
+            if (false && dbPlaces && dbPlaces.length > 0) {
               dbPlaces.forEach(p => {
                 const key = 'PS-2026-' + p.id.slice(0, 5).toUpperCase();
                 if (!map.has(key)) {
@@ -904,7 +899,8 @@
           }
 
           // 3. Check custom uploaded reports from citizen app local storage fallback
-          const uploaded = JSON.parse(localStorage.getItem('safeground_citizen_uploaded_reports') || '[]');
+          // Browser storage is intentionally excluded from the cross-device feed.
+          const uploaded = [];
           uploaded.forEach(item => {
             const key = item.report_code || item.report_id || item.id;
             if (!map.has(key)) {
@@ -936,7 +932,7 @@
           });
 
           // Seed default compliant reports if empty
-          if (map.size === 0) {
+          if (false && map.size === 0) {
             map.set('PS-2026-00124', {
               id: 'PS-2026-00124',
               report_id: 'PS-2026-00124',
@@ -1200,6 +1196,8 @@
           `;
         }).join('');
       }
+
+      window.renderCitizenEvidenceFeed = renderCitizenEvidenceFeed;
 
       window.openImageModal = function(imgSrc, title, desc, lat, lng, deepfakeStatus, authScore, aiGenProb, manipProb, decision, forensicsEncoded, reportCode) {
         let modal = document.getElementById('citizenImageModal');
@@ -1659,6 +1657,23 @@
         }
       };
 
+      // Cloud-first incident synchronization. Realtime is primary; API polling
+      // protects the feed during a transient WebSocket outage.
+      let incidentRealtimeChannel = null;
+      async function connectIncidentRealtime() {
+        try {
+          const { subscribeToHazardRealtime } = await import('./assets/js/admin_supabase.js');
+          incidentRealtimeChannel = subscribeToHazardRealtime((payload) => {
+            console.info('[REALTIME] New report received', payload.new?.report_code || payload.new?.id);
+            window.renderCitizenEvidenceFeed?.();
+          });
+          if (incidentRealtimeChannel) console.info('[REALTIME] Listening for hazard_reports inserts');
+        } catch (error) {
+          console.warn('[REALTIME] Connection failed; API polling remains active.', error);
+        }
+      }
+      connectIncidentRealtime();
+
       // Load SMS dashboard on startup and refresh every 5s
       window.loadSmsAlertsDashboard();
       setInterval(window.loadSmsAlertsDashboard, 5000);
@@ -1667,25 +1682,8 @@
       renderActiveEmergencySOSFeed();
       setInterval(renderActiveEmergencySOSFeed, 3000);
 
-      // Poll every 2 seconds to capture live uploads across tabs/windows
-      setInterval(renderCitizenEvidenceFeed, 2000);
-
-      // Listen for cross-window localStorage changes
-      window.addEventListener('storage', function(e) {
-        if (e.key === 'safeground_citizen_uploaded_reports' || e.key === 'safeground_citizen_state') {
-          renderCitizenEvidenceFeed();
-        }
-      });
-
-      // Listen on BroadcastChannel
-      if ('BroadcastChannel' in window) {
-        const bc = new BroadcastChannel('safeground_citizen_reports_channel');
-        bc.onmessage = function(ev) {
-          if (ev.data && ev.data.type === 'NEW_HAZARD_REPORT') {
-            renderCitizenEvidenceFeed();
-          }
-        };
-      }
+      // Fallback only: reload from FastAPI/Supabase every 20 seconds.
+      setInterval(renderCitizenEvidenceFeed, 20000);
     });
   </script>
 

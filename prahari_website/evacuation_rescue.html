@@ -218,7 +218,7 @@
           </div>
 
           <div class="flex gap-1.5 pt-1">
-            <button onclick="calculateSimulatedRoute()" class="flex-1 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-slate-950 font-black text-xs py-2 rounded-lg transition flex items-center justify-center gap-1 shadow-md shadow-cyan-500/20">
+            <button onclick="calculateSimulatedRoute()" id="btnCalcRoute" class="flex-1 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-slate-950 font-black text-xs py-2 rounded-lg transition flex items-center justify-center gap-1 shadow-md shadow-cyan-500/20">
               <span class="material-symbols-outlined text-sm">alt_route</span> Calculate Safest Route
             </button>
             <button onclick="useMyLiveLocation()" title="Use Current GPS Location" class="px-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-cyan-300 rounded-lg transition">
@@ -227,39 +227,80 @@
           </div>
         </div>
 
-        <!-- Calculated Route Evaluation Panel -->
+        <!-- ══ PRESENTATION DEMO PRESETS (REQUIREMENT 11) ══ -->
+        <div class="bg-[#070a12] p-2.5 rounded-xl border border-slate-800 space-y-2 font-mono">
+          <div class="flex items-center justify-between border-b border-slate-800/80 pb-1.5">
+            <span class="text-[10px] text-cyan-300 font-bold flex items-center gap-1">
+              <span class="material-symbols-outlined text-xs text-cyan-400">play_circle</span>
+              DEMO SCENARIO MODES
+            </span>
+            <span class="text-[8px] bg-cyan-950 text-cyan-300 border border-cyan-800 px-1 py-0.2 rounded font-bold">
+              INTERACTIVE
+            </span>
+          </div>
+          <div class="grid grid-cols-2 gap-1.5 text-[9px]">
+            <button onclick="runDemoScenario(1)" id="btnScenario1" class="p-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700 text-left transition flex items-center gap-1.5 shadow-sm">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
+              <span><b>1:</b> Low-Risk (Normal)</span>
+            </button>
+            <button onclick="runDemoScenario(2)" id="btnScenario2" class="p-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700 text-left transition flex items-center gap-1.5 shadow-sm">
+              <span class="w-2 h-2 rounded-full bg-orange-400 shrink-0"></span>
+              <span><b>2:</b> Block Shortest</span>
+            </button>
+            <button onclick="runDemoScenario(3)" id="btnScenario3" class="p-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700 text-left transition flex items-center gap-1.5 shadow-sm">
+              <span class="w-2 h-2 rounded-full bg-purple-400 shrink-0"></span>
+              <span><b>3:</b> High-Risk Tradeoff</span>
+            </button>
+            <button onclick="runDemoScenario(4)" id="btnScenario4" class="p-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700 text-left transition flex items-center gap-1.5 shadow-sm">
+              <span class="w-2 h-2 rounded-full bg-red-400 shrink-0"></span>
+              <span><b>4:</b> Multi-Blockage</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- ══ CALCULATED ROUTE EVALUATION PANEL (REQUIREMENT 9) ══ -->
         <div id="simRouteResult" class="hidden space-y-2 pt-2 border-t border-slate-800/80">
           <div class="flex justify-between items-center">
-            <span class="text-[11px] font-bold text-white font-mono" id="simRouteTitle">Option A: Safest Route</span>
+            <span class="text-[11px] font-bold text-white font-mono flex items-center gap-1" id="simRouteTitle">
+              <span class="material-symbols-outlined text-sm text-emerald-400">check_circle</span> SAFEST ROUTE FOUND
+            </span>
             <span class="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-700 px-1.5 py-0.5 rounded font-mono font-bold" id="simRouteSafetyBadge">94/100 VERY SAFE</span>
           </div>
 
-          <div class="grid grid-cols-3 gap-1.5 text-center text-xs font-mono">
+          <!-- Key Metrics Grid -->
+          <div class="grid grid-cols-4 gap-1 text-center text-xs font-mono">
             <div class="bg-[#070a12] p-1.5 rounded-lg border border-slate-800">
-              <span class="text-[9px] text-slate-400 block">DISTANCE</span>
-              <span class="text-cyan-300 font-bold" id="simRouteDist">3.2 km</span>
+              <span class="text-[8px] text-slate-400 block">DISTANCE</span>
+              <span class="text-cyan-300 font-bold text-[11px]" id="simRouteDist">3.2 km</span>
             </div>
             <div class="bg-[#070a12] p-1.5 rounded-lg border border-slate-800">
-              <span class="text-[9px] text-slate-400 block">EST. TIME</span>
-              <span class="text-amber-300 font-bold" id="simRouteTime">18 min</span>
+              <span class="text-[8px] text-slate-400 block">EST. TIME</span>
+              <span class="text-amber-300 font-bold text-[11px]" id="simRouteTime">18 min</span>
             </div>
             <div class="bg-[#070a12] p-1.5 rounded-lg border border-slate-800">
-              <span class="text-[9px] text-slate-400 block">EXPOSURE</span>
-              <span class="text-emerald-400 font-bold" id="simRouteRisk">LOW</span>
+              <span class="text-[8px] text-slate-400 block">SAFETY RISK</span>
+              <span class="text-emerald-400 font-bold text-[11px]" id="simRouteRisk">LOW</span>
+            </div>
+            <div class="bg-[#070a12] p-1.5 rounded-lg border border-slate-800">
+              <span class="text-[8px] text-slate-400 block">AVOIDED</span>
+              <span class="text-orange-400 font-bold text-[11px]" id="simRouteAvoided">1 Blocked</span>
             </div>
           </div>
 
           <!-- Destination Shelter -->
           <div class="bg-[#070a12] p-2 rounded-lg border border-slate-800 text-[11px] font-mono space-y-0.5">
-            <div class="text-[10px] text-slate-400">ASSIGNED SAFE SHELTER:</div>
-            <div class="text-white font-bold" id="simShelterName">Gangtok Community Relief Camp</div>
-            <div class="text-[10px] text-emerald-400" id="simShelterAvail">Available: 320 spaces | Safety: 96/100</div>
+            <div class="text-[9px] text-slate-400 uppercase tracking-wider">Destination:</div>
+            <div class="text-white font-bold" id="simShelterName">Gangtok Community Emergency Relief Camp</div>
+            <div class="text-[10px] text-emerald-400" id="simShelterAvail">Available: 360 spaces | Safety: 96/100</div>
           </div>
 
           <!-- Explainability "Why This Route?" -->
-          <div class="bg-[#070a12] p-2.5 rounded-lg border border-slate-800 space-y-1">
+          <div class="bg-[#070a12] p-2.5 rounded-lg border border-slate-800 space-y-1.5">
             <div class="text-[10px] font-mono font-bold text-cyan-400 uppercase flex items-center gap-1">
-              <span class="material-symbols-outlined text-xs">psychology</span> Why This Route? (Explainable AI)
+              <span class="material-symbols-outlined text-xs">psychology</span> Why this route? (Explainable AI)
+            </div>
+            <div class="text-[10px] text-cyan-200 font-sans italic bg-cyan-950/40 p-2 rounded-lg border border-cyan-800/50 leading-relaxed">
+              "Dijkstra selected this route using a safety-adjusted cost that prioritizes lower-risk roads over shorter but dangerous roads."
             </div>
             <ul id="simRouteExplainList" class="text-[10px] text-slate-300 space-y-1 font-sans pl-1">
               <!-- Dynamically populated -->
@@ -268,13 +309,40 @@
 
           <!-- Route Options Switcher -->
           <div class="grid grid-cols-2 gap-1.5 pt-1 text-[11px] font-mono">
-            <button onclick="renderRouteOption('SAFEST')" class="bg-cyan-950/80 border border-cyan-500/50 text-cyan-300 font-bold py-1 px-2 rounded-lg text-left transition">
-              Option A: Safest (94)
+            <button onclick="renderRouteOption('SAFEST')" id="btnOptSafest" class="bg-cyan-950/80 border border-cyan-500/50 text-cyan-300 font-bold py-1 px-2 rounded-lg text-left transition">
+              Option A: Safest
             </button>
-            <button onclick="renderRouteOption('FASTEST_SAFE')" class="bg-slate-900 border border-slate-700 text-slate-300 hover:text-white py-1 px-2 rounded-lg text-left transition">
-              Option B: Fastest (82)
+            <button onclick="renderRouteOption('FASTEST_SAFE')" id="btnOptFastest" class="bg-slate-900 border border-slate-700 text-slate-300 hover:text-white py-1 px-2 rounded-lg text-left transition">
+              Option B: Fastest Safe
             </button>
           </div>
+        </div>
+
+        <!-- ══ NO SAFE ROUTE AVAILABLE PANEL (REQUIREMENT 10) ══ -->
+        <div id="simNoRoutePanel" class="hidden space-y-2.5 pt-2 border-t border-red-500/50 bg-red-950/30 p-3 rounded-xl border border-red-800/60 shadow-lg shadow-red-950/40">
+          <div class="flex items-center gap-1.5 text-red-400 font-bold font-mono text-xs">
+            <span class="material-symbols-outlined text-base animate-pulse text-red-500">dangerous</span>
+            NO SAFE ROUTE AVAILABLE
+          </div>
+          <div class="text-[10px] text-red-200 font-mono bg-red-950/60 p-2 rounded border border-red-800/80">
+            Reason: <b>All reachable routes contain blocked or critical-risk segments.</b>
+          </div>
+          <div class="bg-[#070a12] p-2 rounded-lg border border-slate-800 text-[10px] font-mono space-y-0.5">
+            <div class="text-slate-400">NEAREST ISOLATED SHELTER:</div>
+            <div class="text-white font-bold" id="noRouteShelterName">Gangtok Community Emergency Relief Camp</div>
+            <div class="text-amber-400 text-[9px]" id="noRouteShelterDist">Straight-line Distance: 1.96 km (Ground Passages Severed)</div>
+          </div>
+          <div class="bg-[#070a12] p-2 rounded-lg border border-slate-800 text-[10px] font-mono space-y-1">
+            <div class="text-orange-400 font-bold flex items-center gap-1">
+              <span class="material-symbols-outlined text-xs">block</span> BLOCKED CORRIDORS CAUSING ISOLATION:
+            </div>
+            <ul id="noRouteBlockedList" class="text-slate-300 space-y-0.5 pl-1 text-[9px]">
+              <!-- Dynamically populated -->
+            </ul>
+          </div>
+          <button onclick="triggerEmergencyDispatchFromNoRoute()" class="w-full bg-red-600 hover:bg-red-500 text-white font-black text-xs py-2 rounded-lg transition flex items-center justify-center gap-1 shadow-lg shadow-red-950">
+            <span class="material-symbols-outlined text-sm">emergency</span> DISPATCH ALPINE RESCUE &amp; HELI
+          </button>
         </div>
       </div>
 
@@ -290,25 +358,8 @@
           </span>
         </div>
 
-        <div class="space-y-1.5 text-xs font-mono" id="roadBlockList">
-          <div class="bg-[#070a12] p-2 rounded-lg border border-slate-800 flex justify-between items-center">
-            <div>
-              <div class="font-bold text-white">NH-10 Sector 4 (Mile 12)</div>
-              <div class="text-[10px] text-red-400">Critical Runout Intersection</div>
-            </div>
-            <button onclick="toggleRoadBlock('NH-10-SEC4', 'NH-10 Sector 4')" class="bg-red-950 hover:bg-red-900 text-red-300 border border-red-700 text-[10px] font-bold px-2 py-1 rounded transition">
-              REOPEN
-            </button>
-          </div>
-          <div class="bg-[#070a12] p-2 rounded-lg border border-slate-800 flex justify-between items-center">
-            <div>
-              <div class="font-bold text-white">Lebong Spur Road</div>
-              <div class="text-[10px] text-orange-400">Slope Failure &amp; Boulders</div>
-            </div>
-            <button onclick="toggleRoadBlock('LEBONG-SPUR', 'Lebong Spur Road')" class="bg-red-950 hover:bg-red-900 text-red-300 border border-red-700 text-[10px] font-bold px-2 py-1 rounded transition">
-              REOPEN
-            </button>
-          </div>
+        <div class="space-y-1.5 text-xs font-mono max-h-48 overflow-y-auto custom-scroll" id="roadBlockList">
+          <!-- Dynamically populated via renderRoadBlockagesList() -->
         </div>
 
         <div class="pt-1">
@@ -602,6 +653,7 @@
       loadRescueTeams();
       loadSosPriorityQueue();
       loadCommandMetrics();
+      initRoadNetworkSystem();
     }
 
     // Basemap Switcher
@@ -906,65 +958,480 @@
       }
     }
 
-    // Calculate Simulated Evacuation Route
+    // ════ ROAD NETWORK GRAPH & TOPOLOGY (HIMALAYAN GANGTOK CORRIDOR) ════
+    const ROAD_NETWORK_NODES = {
+      "N_RIDGE": { name: "Gangtok Upper Ridge Junction", lat: 27.3389, lon: 88.6065 },
+      "N_MALL": { name: "MG Marg / Capital Hub", lat: 27.3315, lon: 88.6138 },
+      "N_DEORALI": { name: "Deorali Chorten Junction", lat: 27.3235, lon: 88.6080 },
+      "N_PANIHOUSE": { name: "Pani House Junction", lat: 27.3180, lon: 88.6030 },
+      "N_TADONG_JN": { name: "Tadong 6th Mile Crossing", lat: 27.3125, lon: 88.5995 },
+      "N_INDIRA_N": { name: "Indira Bypass North Hub", lat: 27.3360, lon: 88.6210 },
+      "N_INDIRA_MID": { name: "Indira Bypass Middle Hub", lat: 27.3255, lon: 88.6215 },
+      "N_INDIRA_S": { name: "Indira Bypass South Hub", lat: 27.3160, lon: 88.6140 },
+      "N_BURTUK": { name: "Burtuk Upper Highway Hub", lat: 27.3480, lon: 88.6150 },
+      "N_CHANDMARI": { name: "Chandmari Valley Junction", lat: 27.3430, lon: 88.6230 },
+      "SHELTER_01_GATE": { name: "Gangtok Camp Gate", lat: 27.3245, lon: 88.6180, shelterId: "SHELTER-SK-01" },
+      "SHELTER_02_GATE": { name: "Tadong Center Gate", lat: 27.3120, lon: 88.5990, shelterId: "SHELTER-SK-02" }
+    };
+
+    const ROAD_NETWORK_EDGES = [
+      { id: "NH-10-SEC4", name: "NH-10 Sector 4 (Mile 12)", u: "N_RIDGE", v: "N_MALL", distance_km: 1.10, baseline_risk: 45.0, hazard_zone: false, geometry: [[27.3389, 88.6065], [27.3368, 88.6090], [27.3345, 88.6115], [27.3315, 88.6138]] },
+      { id: "NH-10-SEC3", name: "NH-10 Central (Deorali Spur)", u: "N_MALL", v: "N_DEORALI", distance_km: 1.15, baseline_risk: 20.0, hazard_zone: false, geometry: [[27.3315, 88.6138], [27.3285, 88.6110], [27.3258, 88.6092], [27.3235, 88.6080]] },
+      { id: "NH-10-SEC2", name: "NH-10 Pani House Link", u: "N_DEORALI", v: "N_PANIHOUSE", distance_km: 0.85, baseline_risk: 18.0, hazard_zone: false, geometry: [[27.3235, 88.6080], [27.3208, 88.6055], [27.3180, 88.6030]] },
+      { id: "NH-10-SEC1", name: "NH-10 Tadong Highway Sector", u: "N_PANIHOUSE", v: "N_TADONG_JN", distance_km: 0.75, baseline_risk: 15.0, hazard_zone: false, geometry: [[27.3180, 88.6030], [27.3150, 88.6010], [27.3125, 88.5995]] },
+      { id: "INDIRA-BYPASS-N", name: "Indira Bypass North Connector", u: "N_RIDGE", v: "N_INDIRA_N", distance_km: 1.60, baseline_risk: 12.0, hazard_zone: false, geometry: [[27.3389, 88.6065], [27.3395, 88.6120], [27.3380, 88.6175], [27.3360, 88.6210]] },
+      { id: "INDIRA-BYPASS-MID", name: "Indira Bypass Green Corridor", u: "N_INDIRA_N", v: "N_INDIRA_MID", distance_km: 1.20, baseline_risk: 10.0, hazard_zone: false, geometry: [[27.3360, 88.6210], [27.3310, 88.6218], [27.3255, 88.6215]] },
+      { id: "INDIRA-BYPASS-S", name: "Indira Bypass South Sector", u: "N_INDIRA_MID", v: "N_INDIRA_S", distance_km: 1.30, baseline_risk: 14.0, hazard_zone: false, geometry: [[27.3255, 88.6215], [27.3205, 88.6180], [27.3160, 88.6140]] },
+      { id: "DEVELOPMENT-LINK", name: "Development Area Cross-Link", u: "N_INDIRA_S", v: "N_PANIHOUSE", distance_km: 1.20, baseline_risk: 22.0, hazard_zone: false, geometry: [[27.3160, 88.6140], [27.3165, 88.6080], [27.3180, 88.6030]] },
+      { id: "TADONG-BYPASS-LINK", name: "Tadong Valley Relief Corridor", u: "N_INDIRA_S", v: "N_TADONG_JN", distance_km: 1.50, baseline_risk: 16.0, hazard_zone: false, geometry: [[27.3160, 88.6140], [27.3138, 88.6070], [27.3125, 88.5995]] },
+      { id: "LEBONG-SPUR", name: "Lebong Spur Road", u: "N_RIDGE", v: "N_DEORALI", distance_km: 2.10, baseline_risk: 82.0, hazard_zone: true, geometry: [[27.3389, 88.6065], [27.3340, 88.6010], [27.3280, 88.6035], [27.3235, 88.6080]] },
+      { id: "BURTUK-RIDGE", name: "Burtuk Upper Highway", u: "N_RIDGE", v: "N_BURTUK", distance_km: 1.40, baseline_risk: 25.0, hazard_zone: false, geometry: [[27.3389, 88.6065], [27.3435, 88.6105], [27.3480, 88.6150]] },
+      { id: "BURTUK-CHANDMARI", name: "Burtuk - Chandmari Bypass", u: "N_BURTUK", v: "N_CHANDMARI", distance_km: 1.00, baseline_risk: 22.0, hazard_zone: false, geometry: [[27.3480, 88.6150], [27.3460, 88.6195], [27.3430, 88.6230]] },
+      { id: "CHANDMARI-INDIRA", name: "Chandmari East Access", u: "N_CHANDMARI", v: "N_INDIRA_N", distance_km: 0.90, baseline_risk: 18.0, hazard_zone: false, geometry: [[27.3430, 88.6230], [27.3395, 88.6220], [27.3360, 88.6210]] },
+      { id: "CAMP-ACCESS-EAST", name: "Community Camp East Gate", u: "N_INDIRA_MID", v: "SHELTER_01_GATE", distance_km: 0.35, baseline_risk: 5.0, hazard_zone: false, geometry: [[27.3255, 88.6215], [27.3245, 88.6180]] },
+      { id: "CAMP-ACCESS-WEST", name: "Community Camp West Approach", u: "N_MALL", v: "SHELTER_01_GATE", distance_km: 0.90, baseline_risk: 25.0, hazard_zone: false, geometry: [[27.3315, 88.6138], [27.3275, 88.6155], [27.3245, 88.6180]] },
+      { id: "TADONG-ACCESS", name: "Tadong School Access Road", u: "N_TADONG_JN", v: "SHELTER_02_GATE", distance_km: 0.15, baseline_risk: 5.0, hazard_zone: false, geometry: [[27.3125, 88.5995], [27.3120, 88.5990]] }
+    ];
+
+    // Dynamic Road Blockages Map
+    const activeBlockedRoads = new Map([
+      ["NH-10-SEC4", { name: "NH-10 Sector 4 (Mile 12)", reason: "Critical Runout Intersection & Slope Cracks" }],
+      ["LEBONG-SPUR", { name: "Lebong Spur Road", reason: "Slope Failure & Boulders" }]
+    ]);
+
+    const activeRoadRiskOverrides = new Map();
+    let currentDemoScenario = 2; // Default matches initial 2 blocked roads
+
+    // Great circle distance helper
+    function haversineKm(lat1, lon1, lat2, lon2) {
+      const R = 6371.0;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    // Safety-First Cost Function (Requirement 6)
+    function calculateDijkstraEdgeCost(distance_km, risk_score, is_blocked, hazard_zone = false) {
+      if (is_blocked) return Infinity;
+      const norm_dist = distance_km;
+      const norm_risk = risk_score / 100.0;
+      let risk_penalty;
+      if (risk_score >= 70.0) {
+        risk_penalty = Math.pow(norm_risk, 2) * 10.0;
+      } else if (risk_score >= 40.0) {
+        risk_penalty = Math.pow(norm_risk, 1.5) * 6.0;
+      } else {
+        risk_penalty = norm_risk * 2.0;
+      }
+      const hazard_penalty = hazard_zone ? 5.0 : 0.0;
+      return (0.30 * norm_dist) + (0.70 * risk_penalty) + hazard_penalty;
+    }
+
+    // Render Topological Road Network on Leaflet Map
+    function renderRoadNetworkLayer() {
+      layerGroups.roads.clearLayers();
+
+      ROAD_NETWORK_EDGES.forEach(edge => {
+        const isBlocked = activeBlockedRoads.has(edge.id);
+        const risk = activeRoadRiskOverrides.has(edge.id) ? activeRoadRiskOverrides.get(edge.id) : edge.baseline_risk;
+
+        let strokeColor = "#06b6d4";
+        let weight = 3.5;
+        let dashArray = null;
+
+        if (isBlocked) {
+          strokeColor = "#ef4444";
+          weight = 5;
+          dashArray = "6, 6";
+        } else if (risk >= 60) {
+          strokeColor = "#f97316";
+          weight = 4;
+        } else if (risk >= 30) {
+          strokeColor = "#eab308";
+        }
+
+        const line = L.polyline(edge.geometry, {
+          color: strokeColor,
+          weight: weight,
+          opacity: isBlocked ? 0.95 : 0.7,
+          dashArray: dashArray,
+          lineCap: "round"
+        });
+
+        line.bindPopup(`
+          <div class="p-1 font-mono text-xs text-slate-900">
+            <strong class="${isBlocked ? 'text-red-600' : 'text-cyan-700'} font-bold">${edge.name}</strong>
+            <div class="text-[10px] text-slate-600 mt-0.5">Length: ${edge.distance_km} km | Risk: ${risk}/100</div>
+            <div class="text-[10px] ${isBlocked ? 'text-red-500 font-bold' : 'text-emerald-600'}">Status: ${isBlocked ? 'BLOCKED' : 'OPEN & PASSABLE'}</div>
+            <button onclick="toggleRoadBlock('${edge.id}', '${edge.name}')" class="mt-1.5 w-full ${isBlocked ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-red-600 hover:bg-red-500'} text-white font-bold py-1 px-2 rounded text-[10px] transition">
+              ${isBlocked ? 'REOPEN ROAD' : 'DESIGNATE AS BLOCKED'}
+            </button>
+          </div>
+        `);
+
+        layerGroups.roads.addLayer(line);
+
+        // Add ⛔ blockage marker at midpoint if blocked
+        if (isBlocked) {
+          const midPt = edge.geometry[Math.floor(edge.geometry.length / 2)];
+          const blockIcon = L.divIcon({
+            html: `<div class="w-5 h-5 bg-red-600 border border-white text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-lg animate-pulse">⛔</div>`,
+            className: 'custom-blocked-pin',
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+          });
+          const blockMarker = L.marker(midPt, { icon: blockIcon });
+          blockMarker.bindPopup(`<b>${edge.name} (BLOCKED)</b><br/><span class="text-red-400">${activeBlockedRoads.get(edge.id)?.reason || 'Debris Hazard'}</span>`);
+          layerGroups.roads.addLayer(blockMarker);
+        }
+      });
+    }
+
+    // Render Dynamic Road Blockage Manager List in Sidebar
+    function renderRoadBlockagesList() {
+      const container = document.getElementById('roadBlockList');
+      const badge = document.getElementById('roadBlockCountBadge');
+      if (!container || !badge) return;
+
+      badge.innerText = `${activeBlockedRoads.size} BLOCKED`;
+      container.innerHTML = '';
+
+      if (activeBlockedRoads.size === 0) {
+        container.innerHTML = `
+          <div class="p-2.5 rounded-lg border border-slate-800 bg-[#070a12] text-center text-slate-400 text-[10px]">
+            <span class="text-emerald-400 font-bold">✓ All Arterial Corridors Open.</span><br/>Zero active road blockages recorded.
+          </div>
+        `;
+        return;
+      }
+
+      activeBlockedRoads.forEach((val, key) => {
+        const row = document.createElement('div');
+        row.className = "bg-[#070a12] p-2 rounded-lg border border-slate-800 flex justify-between items-center space-x-2";
+        row.innerHTML = `
+          <div class="truncate">
+            <div class="font-bold text-white text-[11px] truncate">${val.name}</div>
+            <div class="text-[9px] text-red-400 truncate">${val.reason || 'Critical Runout Hazard'}</div>
+          </div>
+          <button onclick="toggleRoadBlock('${key}', '${val.name}')" class="bg-red-950 hover:bg-red-900 text-red-300 border border-red-700 text-[10px] font-bold px-2 py-1 rounded transition shrink-0">
+            REOPEN
+          </button>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    // Toggle Road Blockage (Requirement 4)
+    async function toggleRoadBlock(roadId, roadName) {
+      if (activeBlockedRoads.has(roadId)) {
+        activeBlockedRoads.delete(roadId);
+        // Sync with backend API
+        fetch(`${API_BASE}/api/evacuation/reopen-road?road_id=${encodeURIComponent(roadId)}`, { method: 'POST' }).catch(() => {});
+      } else {
+        activeBlockedRoads.set(roadId, { name: roadName, reason: "Manual Emergency Blockage" });
+        // Sync with backend API
+        fetch(`${API_BASE}/api/evacuation/block-road`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ road_id: roadId, road_name: roadName, blockage_reason: "Manual Emergency Blockage", risk_score: 95.0 })
+        }).catch(() => {});
+      }
+
+      renderRoadNetworkLayer();
+      renderRoadBlockagesList();
+      calculateSimulatedRoute();
+    }
+
+    // Client-Side Dijkstra Engine (Zero-Latency Presentation Fallback & Sync)
+    function runClientDijkstraRouting(originLat, originLon) {
+      // Find nearest network node to citizen start
+      let nearestNode = 'N_RIDGE';
+      let minAirDist = Infinity;
+      for (const [nid, ndata] of Object.entries(ROAD_NETWORK_NODES)) {
+        const d = haversineKm(originLat, originLon, ndata.lat, ndata.lon);
+        if (d < minAirDist) {
+          minAirDist = d;
+          nearestNode = nid;
+        }
+      }
+
+      // Adjacency Graph Construction
+      const graph = {};
+      for (const nid in ROAD_NETWORK_NODES) graph[nid] = [];
+
+      ROAD_NETWORK_EDGES.forEach(edge => {
+        const isBlocked = activeBlockedRoads.has(edge.id);
+        const risk = activeRoadRiskOverrides.has(edge.id) ? activeRoadRiskOverrides.get(edge.id) : edge.baseline_risk;
+        const cost = calculateDijkstraEdgeCost(edge.distance_km, risk, isBlocked, edge.hazard_zone);
+
+        graph[edge.u].push({ target: edge.v, source: edge.u, edge: edge, cost: cost, distance: edge.distance_km, risk: risk, isBlocked: isBlocked });
+        graph[edge.v].push({ target: edge.u, source: edge.v, edge: edge, cost: cost, distance: edge.distance_km, risk: risk, isBlocked: isBlocked });
+      });
+
+      // Dijkstra Shortest Path Search
+      const dist = {};
+      const prev = {};
+      const edgeTaken = {};
+      const visited = new Set();
+      const unvisited = Object.keys(graph);
+
+      unvisited.forEach(n => dist[n] = Infinity);
+      dist[nearestNode] = 0;
+
+      while (unvisited.length > 0) {
+        unvisited.sort((a, b) => dist[a] - dist[b]);
+        const u = unvisited.shift();
+        if (dist[u] === Infinity) break;
+        visited.add(u);
+
+        for (const neighbor of graph[u]) {
+          if (visited.has(neighbor.target)) continue;
+          if (neighbor.cost === Infinity) continue;
+          const alt = dist[u] + neighbor.cost;
+          if (alt < dist[neighbor.target]) {
+            dist[neighbor.target] = alt;
+            prev[neighbor.target] = u;
+            edgeTaken[neighbor.target] = neighbor;
+          }
+        }
+      }
+
+      // Evaluate reachable safe shelters
+      const shelterGates = [
+        { id: "SHELTER-SK-01", gate: "SHELTER_01_GATE", name: "Gangtok Community Emergency Relief Camp", capacity: 500, avail: 360, safety: 96 },
+        { id: "SHELTER-SK-02", gate: "SHELTER_02_GATE", name: "Tadong Higher Secondary Safe Evac Center", capacity: 350, avail: 265, safety: 93.5 }
+      ];
+
+      const candidates = [];
+      shelterGates.forEach(s => {
+        const totalCost = dist[s.gate];
+        if (totalCost < Infinity) {
+          const pathNodes = [];
+          const pathEdges = [];
+          let curr = s.gate;
+          while (curr && curr !== nearestNode) {
+            pathNodes.push(curr);
+            if (edgeTaken[curr]) pathEdges.push(edgeTaken[curr]);
+            curr = prev[curr];
+          }
+          if (curr === nearestNode) pathNodes.push(nearestNode);
+          pathNodes.reverse();
+          pathEdges.reverse();
+
+          // Build continuous geospatial road coords
+          const coords = [[originLon, originLat]];
+          pathEdges.forEach(pe => {
+            const geom = pe.edge.geometry;
+            const uData = ROAD_NETWORK_NODES[pe.source];
+            const d1 = Math.hypot(geom[0][0] - uData.lat, geom[0][1] - uData.lon);
+            const d2 = Math.hypot(geom[geom.length - 1][0] - uData.lat, geom[geom.length - 1][1] - uData.lon);
+            const ordered = d1 <= d2 ? geom : [...geom].reverse();
+            ordered.forEach(pt => coords.push([pt[1], pt[0]]));
+          });
+          coords.push([ROAD_NETWORK_NODES[s.gate].lon, ROAD_NETWORK_NODES[s.gate].lat]);
+
+          const totalDist = pathEdges.reduce((acc, e) => acc + e.distance, 0);
+          const avgRisk = pathEdges.length ? (pathEdges.reduce((acc, e) => acc + e.risk, 0) / pathEdges.length) : 10;
+          const safetyScore = Math.round(Math.max(20, Math.min(99, 100 - (avgRisk * 0.75))));
+          const estTime = Math.max(4, Math.round(totalDist * (4.2 + (avgRisk / 50))));
+
+          const avoidedCount = activeBlockedRoads.size;
+          const avoidedNames = Array.from(activeBlockedRoads.values()).map(b => b.name);
+
+          candidates.push({
+            shelter: s,
+            totalCost: totalCost,
+            totalDist: Math.round(totalDist * 100) / 100,
+            estTime: estTime,
+            safetyScore: safetyScore,
+            riskExposure: avgRisk < 30 ? "LOW" : (avgRisk < 60 ? "MODERATE" : "HIGH"),
+            pathEdges: pathEdges,
+            coords: coords,
+            avoidedCount: avoidedCount,
+            avoidedNames: avoidedNames
+          });
+        }
+      });
+
+      if (candidates.length === 0) {
+        return {
+          no_route_available: true,
+          reason: "All reachable routes contain blocked or critical-risk segments.",
+          nearest_shelter: shelterGates[0],
+          blocked_roads: Array.from(activeBlockedRoads.entries()).map(([k, v]) => ({ road_id: k, name: v.name, reason: v.reason }))
+        };
+      }
+
+      // Select candidate with lowest Dijkstra safety-adjusted cost
+      candidates.sort((a, b) => a.totalCost - b.totalCost);
+      const best = candidates[0];
+      const traversedEdgeNames = best.pathEdges.map(e => e.edge.name);
+
+      return {
+        no_route_available: false,
+        recommended_shelter: {
+          name: best.shelter.name,
+          available_capacity: best.shelter.avail,
+          safety_score: best.shelter.safety
+        },
+        recommended_route: {
+          distance_km: best.totalDist,
+          estimated_time_minutes: best.estTime,
+          safety_score: best.safetyScore,
+          risk_exposure: best.riskExposure,
+          blocked_roads_avoided: best.avoidedCount,
+          route_geojson: {
+            type: "Feature",
+            geometry: { type: "LineString", coordinates: best.coords },
+            properties: { name: `Safest Route to ${best.shelter.name}`, safety_score: best.safetyScore, distance_km: best.totalDist, estimated_time_min: best.estTime, color: "#10b981" }
+          }
+        },
+        alternative_routes: candidates.length > 1 ? [{
+          route_type: "FASTEST_SAFE",
+          distance_km: candidates[1].totalDist,
+          estimated_time_minutes: candidates[1].estTime,
+          safety_score: candidates[1].safetyScore,
+          risk_exposure: candidates[1].riskExposure,
+          route_geojson: {
+            type: "Feature",
+            geometry: { type: "LineString", coordinates: candidates[1].coords },
+            properties: { name: `Alternative Corridor to ${candidates[1].shelter.name}`, safety_score: candidates[1].safetyScore, distance_km: candidates[1].totalDist, estimated_time_min: candidates[1].estTime, color: "#38bdf8" }
+          }
+        }] : [],
+        explanation: [
+          "Dijkstra selected this route using a safety-adjusted cost that prioritizes lower-risk roads over shorter but dangerous roads.",
+          best.avoidedCount > 0 ? `✓ Bypassed ${best.avoidedCount} blocked/critical road segment(s) (${best.avoidedNames.slice(0, 2).join(', ')}).` : "✓ All traversed corridors clear of active ground ruptures.",
+          `✓ Navigates via reinforced corridors: ${traversedEdgeNames.slice(0, 3).join(' ➔ ')}.`,
+          `✓ Selected target: '${best.shelter.name}' with verified open spots.`,
+          `✓ Achieves safety rating of ${best.safetyScore}/100 with ${best.riskExposure} landslide hazard exposure.`
+        ]
+      };
+    }
+
+    // Calculate Simulated Evacuation Route (Requirements 1, 5, 7, 8, 9, 10)
     async function calculateSimulatedRoute() {
       const lat = parseFloat(document.getElementById('simLatInput').value);
       const lon = parseFloat(document.getElementById('simLonInput').value);
       if (isNaN(lat) || isNaN(lon)) return;
 
-      try {
-        const res = await fetch(`${API_BASE}/api/evacuation/calculate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ latitude: lat, longitude: lon, user_id: 'COMMAND_SIM' })
-        });
-        const data = await res.json();
-        currentCalculatedRoutes = data;
+      let data = null;
 
-        // Render Option A on Map
-        renderRouteOption('SAFEST');
-
-        // Populate Panel
-        document.getElementById('simRouteResult').classList.remove('hidden');
-        document.getElementById('simRouteTitle').innerText = data.recommended_route.route_geojson.properties.name;
-        document.getElementById('simRouteSafetyBadge').innerText = `${data.recommended_route.safety_score}/100 VERY SAFE`;
-        document.getElementById('simRouteDist').innerText = `${data.recommended_route.distance_km} km`;
-        document.getElementById('simRouteTime').innerText = `${data.recommended_route.estimated_time_minutes} min`;
-        document.getElementById('simRouteRisk').innerText = data.recommended_route.risk_exposure;
-
-        document.getElementById('simShelterName').innerText = data.recommended_shelter.name;
-        document.getElementById('simShelterAvail').innerText = `Available: ${data.recommended_shelter.available_capacity} spaces | Safety: ${data.recommended_shelter.safety_score}/100`;
-
-        const explainList = document.getElementById('simRouteExplainList');
-        explainList.innerHTML = '';
-        (data.explanation || []).forEach(item => {
-          const li = document.createElement('li');
-          li.className = "flex items-start gap-1";
-          li.innerHTML = `<span class="text-emerald-400 font-bold">${item}</span>`;
-          explainList.appendChild(li);
-        });
-
-        // Place Citizen Pin
-        if (citizenOriginMarker) map.removeLayer(citizenOriginMarker);
-        citizenOriginMarker = L.marker([lat, lon]).addTo(layerGroups.routes);
-        citizenOriginMarker.bindPopup(`<b>Citizen Evacuation Origin</b><br/>${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E`).openPopup();
-
-        map.flyTo([lat, lon], 13, { duration: 1.2 });
-      } catch (err) {
-        console.error("Error calculating evacuation route:", err);
+      // In demo mode 3 or 4, or if offline, prioritize the client-side state
+      if (currentDemoScenario === 3 || currentDemoScenario === 4 || activeRoadRiskOverrides.size > 0) {
+        data = runClientDijkstraRouting(lat, lon);
+      } else {
+        try {
+          const res = await fetch(`${API_BASE}/api/evacuation/calculate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ latitude: lat, longitude: lon, user_id: 'COMMAND_SIM' })
+          });
+          if (res.ok) {
+            data = await res.json();
+          }
+        } catch (err) {
+          console.warn("Backend offline, executing client-side Dijkstra solver:", err);
+        }
+        if (!data || !data.recommended_route) {
+          data = runClientDijkstraRouting(lat, lon);
+        }
       }
+
+      currentCalculatedRoutes = data;
+
+      // Handle NO ROUTE CASE (Requirement 10)
+      if (data.no_route_available) {
+        document.getElementById('simRouteResult').classList.add('hidden');
+        document.getElementById('simNoRoutePanel').classList.remove('hidden');
+
+        if (data.nearest_shelter) {
+          document.getElementById('noRouteShelterName').innerText = data.nearest_shelter.name;
+          const airKm = data.nearest_shelter.straight_line_distance_km ? data.nearest_shelter.straight_line_distance_km.toFixed(2) : "2.1";
+          document.getElementById('noRouteShelterDist').innerText = `Straight-line Distance: ${airKm} km (All Ground Passages Severed)`;
+        }
+
+        const blockedUl = document.getElementById('noRouteBlockedList');
+        blockedUl.innerHTML = '';
+        (data.blocked_roads || Array.from(activeBlockedRoads.values())).forEach(b => {
+          const li = document.createElement('li');
+          li.className = "flex items-center gap-1 text-red-300";
+          li.innerHTML = `<span>⛔</span> <b>${b.name}</b> - <span class="text-slate-400">${b.reason || 'Blocked'}</span>`;
+          blockedUl.appendChild(li);
+        });
+
+        // Clear active route polyline from map
+        layerGroups.routes.clearLayers();
+
+        // Place red pulsing Citizen Pin
+        if (citizenOriginMarker) map.removeLayer(citizenOriginMarker);
+        const redBeacon = L.divIcon({
+          html: `<div class="relative flex items-center justify-center"><span class="absolute w-8 h-8 rounded-full bg-red-500/60 animate-ping"></span><span class="relative w-4 h-4 rounded-full bg-red-600 border-2 border-white shadow-lg"></span></div>`,
+          className: 'custom-isolated-marker',
+          iconSize: [32, 32],
+          iconAnchor: [16, 16]
+        });
+        citizenOriginMarker = L.marker([lat, lon], { icon: redBeacon }).addTo(layerGroups.routes);
+        citizenOriginMarker.bindPopup(`<b>🚨 CITIZEN ISOLATED - NO SAFE PASSAGE</b><br/>All ground corridors blocked by landslides.`).openPopup();
+        map.flyTo([lat, lon], 13, { duration: 1.0 });
+        return;
+      }
+
+      // Safe Route Found - Populate Professional Result Card (Requirement 9)
+      document.getElementById('simNoRoutePanel').classList.add('hidden');
+      document.getElementById('simRouteResult').classList.remove('hidden');
+
+      const rec = data.recommended_route;
+      document.getElementById('simRouteTitle').innerHTML = `<span class="material-symbols-outlined text-sm text-emerald-400">check_circle</span> SAFEST ROUTE FOUND`;
+      document.getElementById('simRouteSafetyBadge').innerText = `${rec.safety_score}/100 VERY SAFE`;
+      document.getElementById('simRouteDist').innerText = `${rec.distance_km} km`;
+      document.getElementById('simRouteTime').innerText = `${rec.estimated_time_minutes} min`;
+      document.getElementById('simRouteRisk').innerText = rec.risk_exposure || "LOW";
+      document.getElementById('simRouteAvoided').innerText = `${rec.blocked_roads_avoided || activeBlockedRoads.size} Blocked`;
+
+      document.getElementById('simShelterName').innerText = data.recommended_shelter.name;
+      document.getElementById('simShelterAvail').innerText = `Available: ${data.recommended_shelter.available_capacity || 360} spaces | Safety: ${data.recommended_shelter.safety_score || 96}/100`;
+
+      const explainList = document.getElementById('simRouteExplainList');
+      explainList.innerHTML = '';
+      (data.explanation || []).slice(1).forEach(item => {
+        const li = document.createElement('li');
+        li.className = "flex items-start gap-1";
+        li.innerHTML = `<span class="text-emerald-400 font-bold">${item}</span>`;
+        explainList.appendChild(li);
+      });
+
+      // Render Route on Map
+      renderRouteOption('SAFEST');
+
+      // Place Citizen Pin
+      if (citizenOriginMarker) map.removeLayer(citizenOriginMarker);
+      const startIcon = L.divIcon({
+        html: `<div class="relative flex items-center justify-center"><span class="absolute w-7 h-7 rounded-full bg-cyan-400/50 animate-ping"></span><div class="relative w-4 h-4 rounded-full bg-cyan-500 border-2 border-white shadow-lg"></div></div>`,
+        className: 'custom-citizen-origin',
+        iconSize: [28, 28],
+        iconAnchor: [14, 14]
+      });
+      citizenOriginMarker = L.marker([lat, lon], { icon: startIcon }).addTo(layerGroups.routes);
+      citizenOriginMarker.bindPopup(`<b>Citizen Origin</b><br/>${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E<br/><span class="text-emerald-600 font-bold">Dijkstra Routing Active</span>`);
     }
 
     // Render Specific Route Option
     function renderRouteOption(mode) {
-      if (!currentCalculatedRoutes) return;
+      if (!currentCalculatedRoutes || !currentCalculatedRoutes.recommended_route) return;
       layerGroups.routes.clearLayers();
 
       let routeData = null;
       if (mode === 'SAFEST') {
         routeData = currentCalculatedRoutes.recommended_route;
+        document.getElementById('btnOptSafest')?.classList.replace('bg-slate-900', 'bg-cyan-950/80');
+        document.getElementById('btnOptFastest')?.classList.replace('bg-cyan-950/80', 'bg-slate-900');
       } else {
         routeData = (currentCalculatedRoutes.alternative_routes || []).find(r => r.route_type === mode) || currentCalculatedRoutes.recommended_route;
+        document.getElementById('btnOptFastest')?.classList.replace('bg-slate-900', 'bg-cyan-950/80');
+        document.getElementById('btnOptSafest')?.classList.replace('bg-cyan-950/80', 'bg-slate-900');
       }
 
       const geo = routeData.route_geojson;
@@ -973,7 +1440,7 @@
       const poly = L.polyline(coords, {
         color: geo.properties.color || '#10b981',
         weight: 6,
-        opacity: 0.9,
+        opacity: 0.95,
         lineCap: 'round',
         lineJoin: 'round',
         dashArray: mode === 'ALTERNATIVE_SAFE' ? '6, 6' : null
@@ -984,10 +1451,103 @@
           <strong>${geo.properties.name}</strong>
           <div>Safety Rating: ${geo.properties.safety_score}/100</div>
           <div>Distance: ${geo.properties.distance_km} km (${geo.properties.estimated_time_min} mins)</div>
+          <div class="text-emerald-600 font-bold mt-1">Dijkstra Risk-Cost Evaluated</div>
         </div>
       `);
       layerGroups.routes.addLayer(poly);
       map.fitBounds(poly.getBounds(), { padding: [40, 40] });
+
+      // Re-place citizen pin if present
+      const lat = parseFloat(document.getElementById('simLatInput').value);
+      const lon = parseFloat(document.getElementById('simLonInput').value);
+      if (!isNaN(lat) && !isNaN(lon)) {
+        if (citizenOriginMarker) map.removeLayer(citizenOriginMarker);
+        const startIcon = L.divIcon({
+          html: `<div class="relative flex items-center justify-center"><span class="absolute w-7 h-7 rounded-full bg-cyan-400/50 animate-ping"></span><div class="relative w-4 h-4 rounded-full bg-cyan-500 border-2 border-white shadow-lg"></div></div>`,
+          className: 'custom-citizen-origin',
+          iconSize: [28, 28],
+          iconAnchor: [14, 14]
+        });
+        citizenOriginMarker = L.marker([lat, lon], { icon: startIcon }).addTo(layerGroups.routes);
+        citizenOriginMarker.bindPopup(`<b>Citizen Origin</b><br/>${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E`);
+      }
+    }
+
+    // Presentation Demo Scenarios Handler (Requirement 11)
+    function runDemoScenario(scenarioId) {
+      currentDemoScenario = scenarioId;
+
+      // Update button visual styles
+      [1, 2, 3, 4].forEach(i => {
+        const btn = document.getElementById(`btnScenario${i}`);
+        if (btn) {
+          btn.className = (i === scenarioId)
+            ? "p-1.5 rounded-lg bg-cyan-950 text-cyan-200 border-2 border-cyan-400 text-left transition flex items-center gap-1.5 shadow-md font-bold"
+            : "p-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 text-slate-300 border border-slate-700 text-left transition flex items-center gap-1.5 shadow-sm";
+        }
+      });
+
+      if (scenarioId === 1) {
+        // Scenario 1: Low-risk roads -> normal safe route
+        activeBlockedRoads.delete('NH-10-SEC4');
+        activeBlockedRoads.delete('INDIRA-BYPASS-N');
+        activeBlockedRoads.delete('BURTUK-RIDGE');
+        activeRoadRiskOverrides.set('NH-10-SEC4', 25.0);
+        document.getElementById('simLatInput').value = "27.3389";
+        document.getElementById('simLonInput').value = "88.6065";
+      } else if (scenarioId === 2) {
+        // Scenario 2: Block the shortest road -> Dijkstra automatically reroutes
+        activeBlockedRoads.set('NH-10-SEC4', { name: "NH-10 Sector 4 (Mile 12)", reason: "Critical Runout Intersection & Slope Cracks" });
+        activeBlockedRoads.delete('INDIRA-BYPASS-N');
+        activeBlockedRoads.delete('BURTUK-RIDGE');
+        activeRoadRiskOverrides.delete('NH-10-SEC4');
+        document.getElementById('simLatInput').value = "27.3389";
+        document.getElementById('simLonInput').value = "88.6065";
+      } else if (scenarioId === 3) {
+        // Scenario 3: Make shortest road HIGH RISK -> chooses longer LOW-RISK route
+        activeBlockedRoads.delete('NH-10-SEC4');
+        activeBlockedRoads.delete('INDIRA-BYPASS-N');
+        activeBlockedRoads.delete('BURTUK-RIDGE');
+        activeRoadRiskOverrides.set('NH-10-SEC4', 85.0); // 85% HIGH RISK
+        document.getElementById('simLatInput').value = "27.3389";
+        document.getElementById('simLonInput').value = "88.6065";
+      } else if (scenarioId === 4) {
+        // Scenario 4: Block multiple roads -> system recalculates / isolation alert
+        activeBlockedRoads.set('NH-10-SEC4', { name: "NH-10 Sector 4 (Mile 12)", reason: "Active Mudslide Avalanche" });
+        activeBlockedRoads.set('INDIRA-BYPASS-N', { name: "Indira Bypass North Connector", reason: "Debris Runout Inundation" });
+        activeBlockedRoads.set('BURTUK-RIDGE', { name: "Burtuk Upper Highway", reason: "Major Rockfall Rupture" });
+        activeBlockedRoads.set('LEBONG-SPUR', { name: "Lebong Spur Road", reason: "Slope Failure & Boulders" });
+        document.getElementById('simLatInput').value = "27.3389";
+        document.getElementById('simLonInput').value = "88.6065";
+      }
+
+      renderRoadNetworkLayer();
+      renderRoadBlockagesList();
+      calculateSimulatedRoute();
+    }
+
+    // Emergency Dispatch from No Route Card
+    function triggerEmergencyDispatchFromNoRoute() {
+      const lat = parseFloat(document.getElementById('simLatInput').value);
+      const lon = parseFloat(document.getElementById('simLonInput').value);
+      alert(`🚨 TACTICAL HELI-EXTRACTION & ALPINE RESCUE DISPATCHED!\n\nLocation: ${lat}°N, ${lon}°E\nNDRF 1st Battalion Alpine Quick Response deployed via aerial approach.\nCitizen advised to SHELTER IN PLACE at highest stable ground.`);
+
+      // Draw direct air corridor
+      const heliCoords = [[lat + 0.03, lon - 0.03], [lat, lon]];
+      const heliLine = L.polyline(heliCoords, {
+        color: '#ef4444',
+        weight: 5,
+        dashArray: '8, 8',
+        opacity: 0.95
+      }).addTo(layerGroups.routes);
+      map.fitBounds(heliLine.getBounds(), { padding: [50, 50] });
+    }
+
+    // Initialize Road Network and Blockages System
+    function initRoadNetworkSystem() {
+      renderRoadNetworkLayer();
+      renderRoadBlockagesList();
+      runDemoScenario(2); // Start on Scenario 2 (matching default 2 blockages)
     }
 
     // Dispatch Rescue Team Action
@@ -1049,13 +1609,19 @@
       if (!name) return;
 
       const roadId = name.replace(/\s+/g, '-').toUpperCase();
-      await fetch(`${API_BASE}/api/evacuation/block-road`, {
+      activeBlockedRoads.set(roadId, { name: name, reason: reason || 'Manual Emergency Blockage' });
+
+      // Post to backend
+      fetch(`${API_BASE}/api/evacuation/block-road`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ road_id: roadId, road_name: name, blockage_reason: reason })
-      });
+      }).catch(() => {});
+
       closeManualBlockModal();
-      alert(`Road '${name}' is now BLOCKED. All evacuation routes are dynamically recalculating.`);
+      renderRoadNetworkLayer();
+      renderRoadBlockagesList();
+      calculateSimulatedRoute();
       loadCommandMetrics();
     }
 

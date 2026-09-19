@@ -19,7 +19,7 @@ export function renderMoreView() {
               <span class="text-sm font-extrabold text-on-surface">${currentUser?.fullName || 'Verified Citizen'}</span>
               <span class="text-xs text-on-surface-variant font-mono">${currentUser?.mobileNumber || '+91 9876543210'}</span>
               <span class="text-[10px] text-emerald-600 font-semibold flex items-center gap-1 mt-0.5">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Live GPS: ${currentLocation.lat.toFixed(4)}°, ${currentLocation.lng.toFixed(4)}°
+                <span class="w-1.5 h-1.5 rounded-full ${currentLocation?.lat ? 'bg-emerald-500' : 'bg-amber-500'}"></span> ${currentLocation?.lat ? `Live GPS: ${currentLocation.lat.toFixed(4)}°, ${currentLocation.lng.toFixed(4)}°` : 'Locating GPS...'}
               </span>
             </div>
           </div>

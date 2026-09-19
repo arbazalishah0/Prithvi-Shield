@@ -24,21 +24,58 @@ body {
 
 /* Safe areas & Phone bounds (WindowInsets & notch aware) */
 .pt-safe {
-  padding-top: max(var(--status-bar-height, 0px), env(safe-area-inset-top, 0px), 12px);
+  padding-top: max(env(safe-area-inset-top, 0px), var(--status-bar-height, 0px), 24px) !important;
 }
 
 .pb-safe {
-  padding-bottom: max(var(--nav-bar-height, 0px), env(safe-area-inset-bottom, 0px), 8px);
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), var(--nav-bar-height, 0px), 12px) !important;
+}
+
+/* Master Mobile App Viewport Shell */
+#app-viewport,
+#screen-inner-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: #090d16;
+}
+
+/* Ensure all flex-1 view roots allow flex-shrink and scroll independently */
+#screen-inner-container > [class*="flex-1"] {
+  min-height: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: auto;
+}
+
+/* Independent Scrollable Content Area */
+.app-content {
+  flex: 1 1 0%;
+  min-height: 0 !important;
+  height: 100% !important;
+  width: 100%;
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: auto;
+  padding-bottom: calc(96px + max(env(safe-area-inset-bottom, 0px), var(--nav-bar-height, 0px), 16px)) !important;
 }
 
 /* Main scrollable content bottom padding: ensures full scroll clearance past floating SOS and bottom nav */
 .pb-nav-safe {
-  padding-bottom: calc(var(--bottom-nav-height, 64px) + max(var(--nav-bar-height, 0px), env(safe-area-inset-bottom, 0px), 8px) + 80px) !important;
+  padding-bottom: calc(96px + max(env(safe-area-inset-bottom, 0px), var(--nav-bar-height, 0px), 16px)) !important;
 }
 
 /* Deep padding for forms and views with bottom submit buttons (e.g. Report screen) */
 .pb-nav-safe-deep {
-  padding-bottom: calc(var(--bottom-nav-height, 64px) + max(var(--nav-bar-height, 0px), env(safe-area-inset-bottom, 0px), 8px) + 140px) !important;
+  padding-bottom: calc(140px + max(env(safe-area-inset-bottom, 0px), var(--nav-bar-height, 0px), 16px)) !important;
 }
 
 /* Material Symbols configuration */
@@ -66,18 +103,18 @@ body {
 /* Independent Floating SOS Action Button */
 #sos-fab-container {
   position: fixed;
-  z-index: 45;
+  z-index: 1010;
   pointer-events: auto;
-  /* Dynamically calculated: Bottom Nav Height + System Nav Bar Inset + 16px safe gap */
-  bottom: calc(var(--bottom-nav-height, 64px) + max(var(--nav-bar-height, 0px), env(safe-area-inset-bottom, 0px), 8px) + 16px);
+  /* Dynamically calculated: strictly above bottom nav and safe insets */
+  bottom: calc(85px + max(env(safe-area-inset-bottom, 0px), var(--nav-bar-height, 0px), 8px));
   right: calc(max(1rem, (100vw - 32rem) / 2 + 1rem));
 }
 
 #floating-sos-btn {
-  width: 56px;
-  height: 56px;
-  min-width: 56px;
-  min-height: 56px;
+  width: 58px;
+  height: 58px;
+  min-width: 58px;
+  min-height: 58px;
   border-radius: 9999px;
   background-color: #ba1a1a;
   color: #ffffff;
@@ -85,49 +122,49 @@ body {
   align-items: center;
   justify-content: center;
   font-weight: 900;
-  font-size: 0.875rem;
+  font-size: 0.95rem;
   letter-spacing: 0.08em;
-  border: 2.5px solid rgba(255, 255, 255, 0.9);
-  box-shadow: 0 8px 24px rgba(186, 26, 26, 0.55), 0 2px 6px rgba(0, 0, 0, 0.35);
+  border: 2.5px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 8px 24px rgba(186, 26, 26, 0.65), 0 2px 8px rgba(0, 0, 0, 0.45);
   transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
   user-select: none;
 }
 
 #floating-sos-btn:hover {
   background-color: #93000a;
-  box-shadow: 0 10px 28px rgba(186, 26, 26, 0.7);
+  box-shadow: 0 10px 28px rgba(186, 26, 26, 0.8);
 }
 
 #floating-sos-btn:active {
   transform: scale(0.92);
 }
 
-/* Independent Bottom Navigation Bar */
+/* Independent Fixed Bottom Navigation Bar */
 #app-bottom-nav {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 40;
+  z-index: 1000;
   width: 100%;
   max-width: 32rem; /* matches max-w-lg container */
   margin-left: auto;
   margin-right: auto;
   background-color: rgba(255, 255, 255, 0.98);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-top: 1px solid rgba(195, 198, 214, 0.6);
   border-top-left-radius: 20px;
   border-top-right-radius: 20px;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.12);
   user-select: none;
-  padding-bottom: max(var(--nav-bar-height, 0px), env(safe-area-inset-bottom, 0px), 8px);
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), var(--nav-bar-height, 0px), 8px);
 }
 
 .dark #app-bottom-nav {
-  background-color: rgba(20, 26, 40, 0.98);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.4);
+  background-color: rgba(15, 23, 42, 0.98);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.5);
 }
 
 /* Pulse animation for SOS */
@@ -182,3 +219,107 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* ================================
+   FIXED BOTTOM NAVIGATION & MAIN CONTENT
+   ================================ */
+
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 78px;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background: rgba(255, 255, 255, 0.98);
+  border-top: 1px solid #e5e7eb;
+  z-index: 9999;
+  padding-bottom: env(safe-area-inset-bottom);
+  box-sizing: border-box;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  isolation: isolate;
+}
+
+.dark .bottom-nav {
+  background: rgba(15, 23, 42, 0.98);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* Navigation items */
+.bottom-nav .nav-item {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  border: none;
+  background: transparent;
+  position: relative;
+  cursor: pointer;
+}
+
+.nav-icon {
+  font-size: 20px;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+/* Active navigation item */
+.bottom-nav .nav-item.active {
+  color: #0757c9;
+  font-weight: 700;
+}
+
+/* SOS navigation item */
+.bottom-nav .nav-item.sos {
+  color: #dc2626;
+  font-weight: 800;
+}
+
+.bottom-nav .nav-item.sos .nav-icon {
+  background: #dc2626;
+  color: #ffffff;
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 900;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+}
+
+/* Main scrolling area */
+.main-content {
+  min-height: 100vh;
+  overflow-y: auto;
+  padding-bottom: 90px;
+}
+
+/* Map Custom Tooltips & Markers */
+.gps-tooltip {
+  background: rgba(15, 23, 42, 0.95) !important;
+  color: #f8fafc !important;
+  border: 1px solid rgba(59, 130, 246, 0.4) !important;
+  border-radius: 12px !important;
+  padding: 6px 10px !important;
+  font-size: 11px !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35) !important;
+}
+
+.gps-tooltip::before {
+  border-top-color: rgba(15, 23, 42, 0.95) !important;
+}
+
+.leaflet-container {
+  font-family: inherit;
+}
+
+

@@ -133,7 +133,7 @@ function renderApp() {
 
   root.innerHTML = `
     <!-- Production Citizen Mobile App Container -->
-    <div id="screen-inner-container" class="w-full max-w-lg mx-auto bg-surface min-h-screen relative flex flex-col shadow-2xl overflow-x-hidden antialiased">
+    <div id="screen-inner-container" class="w-full max-w-lg mx-auto bg-surface h-full h-[100dvh] max-h-screen relative flex flex-col shadow-2xl overflow-hidden antialiased">
       ${renderGlobalOverlays()}
       ${viewHtml}
     </div>
@@ -160,20 +160,46 @@ if (!isSplashShown) {
 
 renderApp();
 
+// Fix #11: Debounce re-renders so rapid GPS/state updates (every few seconds)
+// don't destroy and rebuild the entire DOM each time.
+// Without this, forms reset mid-typing, scroll position is lost, and maps break.
+let _renderDebounceTimer = null;
+function debouncedRenderApp() {
+  if (_renderDebounceTimer) clearTimeout(_renderDebounceTimer);
+  _renderDebounceTimer = setTimeout(() => { renderApp(); }, 80);
+}
+
 // Subscribe to store updates
 store.subscribe(() => {
-  renderApp();
+  debouncedRenderApp();
 });
 
 // Subscribe to PWA state changes
 pwaManager.onStateChange(() => {
-  renderApp();
+  debouncedRenderApp();
 });
 
-// Initialize FCM Push & Live Broadcast Receiver
-fcmService.initialize(
-  'citizen_001',
-  store.state.currentUser?.fullName || 'Arunav Baruah',
-  'Kamrup / Guwahati',
-  store.state.currentUser?.language || 'English'
-);
+// Fix #8: Initialize FCM with real user data from store, not hardcoded defaults.
+// Re-initialize after login when actual user info is available.
+const _initFCM = () => {
+  const u = store.state.currentUser;
+  const userId = store.getCitizenUserId ? store.getCitizenUserId() : 'citizen_app';
+  const region = u?.locality || u?.region || 'India';
+  fcmService.initialize(
+    userId,
+    u?.fullName || 'Citizen',
+    region,
+    u?.language || 'en'
+  );
+};
+_initFCM();
+// Re-init when user logs in so correct identity is registered
+store.subscribe(() => {
+  if (store.state.isLoggedIn && !fcmService._initialized) {
+    _initFCM();
+    fcmService._initialized = true;
+  }
+  if (!store.state.isLoggedIn) {
+    fcmService._initialized = false;
+  }
+});

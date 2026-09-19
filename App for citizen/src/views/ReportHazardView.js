@@ -160,12 +160,16 @@ export function renderReportHazardView() {
           <div class="flex items-center justify-between text-xs font-mono bg-surface-container-low p-3 rounded-xl border border-outline-variant/50 mt-1">
             <div class="flex flex-col gap-0.5">
               <div class="flex items-center gap-2">
-                <span class="text-on-surface font-extrabold text-sm" id="gps-coords-display">${currentLocation.lat.toFixed(4)}° N, ${currentLocation.lng.toFixed(4)}° E</span>
+                <span class="text-on-surface font-extrabold text-sm" id="gps-coords-display">
+                  ${currentLocation.lat && currentLocation.lng ? `${currentLocation.lat.toFixed(4)}° ${currentLocation.lat >= 0 ? 'N' : 'S'}, ${currentLocation.lng.toFixed(4)}° ${currentLocation.lng >= 0 ? 'E' : 'W'}` : 'Acquiring GPS Telemetry...'}
+                </span>
               </div>
-              <span id="gps-accuracy-display" class="text-on-surface-variant text-[11px]">Accuracy: ±${currentLocation.accuracy || 6}m &bull; ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              <span id="gps-accuracy-display" class="text-on-surface-variant text-[11px]">
+                ${currentLocation.accuracy ? `Accuracy: ±${currentLocation.accuracy}m &bull; ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Calibrating satellite fix...'}
+              </span>
             </div>
 
-            <button id="refresh-gps-btn" type="button" class="bg-primary/10 hover:bg-primary/20 text-primary px-3 py-2 rounded-xl font-sans font-bold text-xs flex items-center gap-1 transition active:scale-95 shrink-0 shadow-xs">
+            <button id="refresh-gps-btn" type="button" class="bg-primary/10 hover:bg-primary/20 text-primary px-3 py-2 rounded-xl font-sans font-bold text-xs flex items-center gap-1 transition active:scale-95 shrink-0 shadow-xs cursor-pointer">
               <span class="material-symbols-outlined text-[16px]">refresh</span>
               <span>Refresh Location</span>
             </button>
@@ -398,10 +402,18 @@ export function bindReportHazardEvents(container) {
       }
 
       // Submit via Central Store
-      const report = await store.submitHazardReport({
-        category: selectedCategory,
-        description: detailsText
-      });
+      let report;
+      try {
+        report = await store.submitHazardReport({
+          category: selectedCategory,
+          description: detailsText
+        });
+      } catch (error) {
+        console.error('[REPORT] Submission failed before cloud confirmation', error);
+        progressModal.remove();
+        showValidationError(error.message || 'Report submission failed. Please retry.');
+        return;
+      }
 
       // Step 3: Complete
       await new Promise(r => setTimeout(r, 500));

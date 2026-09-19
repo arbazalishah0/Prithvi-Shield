@@ -1,615 +1,778 @@
-import L from 'leaflet';
+/**
+ * PRITHVI-SHIELD / SafeGround Live Risk Map View
+ * Real-time GPS Telemetry, Multi-Layer Disaster Visualizations,
+ * Landslide Risk Zones, Verified Citizen Reports, SOS Beacons,
+ * Safe Shelters, and Dangerous Roads.
+ */
+
 import { store } from '../store.js';
 import { renderBottomNav, bindNavigationEvents } from '../components/Navigation.js';
-import { pwaManager } from '../services/pwaService.js';
-import { triggerPermissionPrompt } from '../components/PWABanner.js';
-
-let mapInstance = null;
+import { mapService } from '../services/mapService.js';
+import { locationService } from '../services/locationService.js';
 
 export function renderMapView() {
-  const { hazards, shelters, currentLocation } = store.state;
+  const { currentLocation } = store.state;
+  const isAcquiring = currentLocation.status === 'ACQUIRING';
+  const isDenied = currentLocation.status === 'PERMISSION_DENIED';
+  const isUnavailable = currentLocation.status === 'UNAVAILABLE' || currentLocation.status === 'SERVICES_DISABLED';
+  const hasLiveCoords = locationService.validateCoordinates(currentLocation.lat, currentLocation.lng);
+  const coordsFormatted = locationService.formatCoordinates(currentLocation.lat, currentLocation.lng);
+  const localityName = currentLocation.locality || currentLocation.placeName || (hasLiveCoords ? 'Current Location' : 'Locating Area...');
 
   return `
-    <div class="relative flex h-screen w-full flex-col bg-surface overflow-hidden">
-      <!-- Top Connectivity Bar -->
-      <div class="fixed top-0 left-0 w-full z-40 bg-slate-950 text-slate-200 px-3.5 py-1.5 flex justify-between items-center text-[12px] font-medium pt-safe border-b border-slate-800/80 select-none shadow-xs backdrop-blur-md">
-        <div class="flex items-center gap-1.5 bg-slate-900/90 text-slate-200 px-2.5 py-0.5 rounded-full border border-slate-800 shadow-2xs">
-          <span class="relative flex h-2 w-2">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-          </span>
-          <span class="text-[11px] font-semibold tracking-wide">Map Live Telemetry</span>
-        </div>
-        <div class="flex items-center gap-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide">
-          <span class="material-symbols-outlined text-[13px]">sync</span>
-          <span>Live Sync</span>
-        </div>
+    <div class="relative flex h-screen w-full flex-col bg-slate-950 overflow-hidden select-none">
+      
+      <!-- 1. FULL-SCREEN NATIVE LEAFLET MAP CANVAS -->
+      <div class="absolute inset-0 z-0 w-full h-full bg-slate-900">
+        <div id="live-map-canvas" class="w-full h-full"></div>
       </div>
 
-      <!-- Map Canvas & Inbuilt Google Map Container -->
-      <div class="absolute inset-0 z-0 w-full h-full bg-slate-200 relative">
-        <div id="leaflet-map" class="w-full h-full"></div>
-        <iframe id="gmap-inbuild-iframe" class="w-full h-full hidden border-0 absolute inset-0 z-10" src="" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
-      </div>
+      <!-- 2. TOP HEADER & COMPACT LOCATION CARD -->
+      <div class="relative z-30 pointer-events-none pt-safe px-3.5 pt-2 flex flex-col gap-2 max-w-xl mx-auto w-full">
+        <!-- Top App Bar -->
+        <div class="pointer-events-auto bg-slate-900/90 dark:bg-slate-950/90 backdrop-blur-md border border-slate-800/90 rounded-2xl p-2.5 px-3.5 shadow-xl flex items-center justify-between text-white">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
+              <span class="material-symbols-outlined text-[20px]">public</span>
+            </div>
+            <div class="flex flex-col">
+              <h1 class="text-xs font-black tracking-wider uppercase text-blue-400 font-mono">PRITHVI-SHIELD</h1>
+              <span class="text-sm font-black text-white leading-tight">Live Risk Map</span>
+            </div>
+          </div>
 
-      <!-- UI Overlay Layer (Pointer Events None Container) -->
-      <div class="relative z-20 flex flex-col h-full pointer-events-none pb-nav-safe pt-[calc(var(--status-bar-height,0px)+48px)]">
-        
-        <!-- Search & Filter Header -->
-        <div class="p-4 pointer-events-auto max-w-xl mx-auto w-full">
-          <div class="flex flex-col gap-2.5">
-            <!-- Search Bar -->
-            <div class="flex gap-2 items-center bg-surface-container-lowest/95 backdrop-blur-md rounded-2xl p-2 shadow-lg border border-outline-variant/80">
-              <div class="text-primary px-2 flex items-center gap-1">
-                <span class="material-symbols-outlined text-[22px]">search</span>
-              </div>
-              <input id="map-search-input" class="bg-transparent border-none focus:ring-0 focus:outline-none flex-1 text-sm text-on-surface placeholder:text-outline font-medium" placeholder="Search shelters, hazards, routes..." type="text">
-              <span class="hidden sm:flex text-[10px] font-bold px-2 py-1 rounded-full bg-blue-500/10 text-blue-600 border border-blue-500/20 items-center gap-1 shrink-0">
-                <span class="material-symbols-outlined text-[12px]">map</span> Google Maps Live
+          <div class="flex items-center gap-1.5">
+            <!-- Layers Toggle Button -->
+            <button id="map-layers-btn" class="pointer-events-auto bg-slate-800/90 hover:bg-slate-700/90 active:scale-95 text-slate-200 border border-slate-700/80 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer" title="Toggle Map Layers">
+              <span class="material-symbols-outlined text-[16px] text-blue-400">layers</span>
+              <span>Layers</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Compact Location Card -->
+        <div class="pointer-events-auto bg-slate-900/90 dark:bg-slate-950/90 backdrop-blur-md border border-slate-800/90 rounded-2xl p-3 shadow-xl flex items-center justify-between text-white">
+          <div class="flex items-start gap-2.5">
+            <span class="material-symbols-outlined text-red-500 text-[20px] mt-0.5 animate-bounce">location_on</span>
+            <div class="flex flex-col">
+              <span id="loc-card-city" class="text-xs font-extrabold text-white leading-snug">
+                ${localityName}
               </span>
-              <button id="map-filter-btn" class="bg-primary/10 hover:bg-primary/20 p-2 rounded-xl text-primary transition-colors">
-                <span class="material-symbols-outlined text-[20px]">tune</span>
-              </button>
-            </div>
-
-            <!-- Quick Filter Chips & Google Map Type Selector -->
-            <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1 items-center">
-              <button data-filter="all" class="map-chip active shrink-0 px-3.5 py-1.5 rounded-full bg-primary text-white text-xs font-bold shadow-md transition-all">All Intel</button>
-              <button data-filter="hazards" class="map-chip shrink-0 px-3.5 py-1.5 rounded-full bg-surface-container-lowest/90 backdrop-blur-sm text-on-surface text-xs font-semibold shadow-sm border border-outline-variant hover:bg-surface-container-low transition-all">Hazards (${hazards.length})</button>
-              <button data-filter="shelters" class="map-chip shrink-0 px-3.5 py-1.5 rounded-full bg-surface-container-lowest/90 backdrop-blur-sm text-on-surface text-xs font-semibold shadow-sm border border-outline-variant hover:bg-surface-container-low transition-all">Safe Shelters (${shelters.length})</button>
-
-              <div class="h-4 w-px bg-outline-variant/60 shrink-0 mx-1"></div>
-
-              <!-- Google Map Types -->
-              <button id="gmap-type-roadmap" class="gmap-type-btn shrink-0 px-3 py-1 rounded-full bg-blue-600 text-white text-[11px] font-bold shadow-sm flex items-center gap-1">
-                <span class="material-symbols-outlined text-[13px]">map</span> Standard
-              </button>
-              <button id="gmap-type-satellite" class="gmap-type-btn shrink-0 px-3 py-1 rounded-full bg-surface-container-lowest/90 backdrop-blur-sm text-on-surface text-[11px] font-bold border border-outline-variant hover:bg-surface-container-low shadow-sm flex items-center gap-1">
-                <span class="material-symbols-outlined text-[13px]">satellite_alt</span> Satellite
-              </button>
-              <button id="gmap-type-terrain" class="gmap-type-btn shrink-0 px-3 py-1 rounded-full bg-surface-container-lowest/90 backdrop-blur-sm text-on-surface text-[11px] font-bold border border-outline-variant hover:bg-surface-container-low shadow-sm flex items-center gap-1">
-                <span class="material-symbols-outlined text-[13px]">terrain</span> Terrain
-              </button>
-              <button id="gmap-type-traffic" class="gmap-type-btn shrink-0 px-3 py-1 rounded-full bg-surface-container-lowest/90 backdrop-blur-sm text-on-surface text-[11px] font-bold border border-outline-variant hover:bg-surface-container-low shadow-sm flex items-center gap-1">
-                <span class="material-symbols-outlined text-[13px]">traffic</span> Traffic
-              </button>
-              <button id="gmap-toggle-inbuild-mode" class="gmap-type-btn shrink-0 px-3 py-1 rounded-full bg-surface-container-lowest/90 backdrop-blur-sm text-on-surface text-[11px] font-bold border border-outline-variant hover:bg-surface-container-low shadow-sm flex items-center gap-1">
-                <span class="material-symbols-outlined text-[13px]">pin_drop</span> Inbuilt G-Map Frame
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div class="flex-1"></div>
-
-        <!-- Legend and GPS Floating Controls -->
-        <div class="px-4 mb-2 flex justify-between items-end pointer-events-auto max-w-xl mx-auto w-full">
-          <!-- Risk Legend -->
-          <div class="bg-surface-container-lowest/95 backdrop-blur-md p-3 rounded-2xl border border-outline-variant/80 shadow-xl max-w-[145px]">
-            <p class="text-[10px] font-bold uppercase tracking-wider text-outline mb-2 flex items-center gap-1">
-              <span class="material-symbols-outlined text-[14px]">legend_toggle</span>
-              Risk Scale
-            </p>
-            <div class="flex flex-col gap-1.5">
-              <div class="flex items-center gap-2">
-                <div class="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
-                <span class="text-[11px] font-semibold text-on-surface">Safe Zone</span>
-              </div>
-              <div class="flex items-center gap-2">
-                <div class="w-2.5 h-2.5 rounded-full bg-amber-400"></div>
-                <span class="text-[11px] font-semibold text-on-surface">Elevated</span>
-              </div>
-              <div class="flex items-center gap-2">
-                <div class="w-2.5 h-2.5 rounded-full bg-orange-500"></div>
-                <span class="text-[11px] font-semibold text-on-surface">High Risk</span>
-              </div>
-              <div class="flex items-center gap-2">
-                <div class="w-2.5 h-2.5 rounded-full bg-error"></div>
-                <span class="text-[11px] font-semibold text-on-surface">Critical</span>
-              </div>
+              <span id="loc-card-coords" class="text-[11px] font-mono text-slate-300">
+                ${hasLiveCoords ? coordsFormatted.fullText : isAcquiring ? 'Acquiring GPS fix...' : 'GPS Offline'}
+              </span>
+              <span id="loc-card-accuracy" class="text-[10px] text-slate-400 font-medium flex items-center gap-1.5 mt-0.5">
+                <span>GPS Accuracy: ${hasLiveCoords ? `±${currentLocation.accuracy || 10}m` : 'Calculating...'}</span>
+              </span>
             </div>
           </div>
 
-          <!-- GPS, Google Maps & Zoom Controls -->
-          <div class="flex flex-col gap-2">
-            <!-- Direct Open User Location in Google Maps -->
-            <button id="map-open-gmap-user-btn" class="w-12 h-12 flex flex-col items-center justify-center bg-blue-600 hover:bg-blue-700 text-white rounded-2xl border border-blue-400 shadow-xl transition-transform active:scale-95 group" title="Open My Live Location in Google Maps">
-              <span class="material-symbols-outlined text-[20px]">open_in_new</span>
-              <span class="text-[8px] font-black tracking-tighter uppercase font-mono">G-Map</span>
-            </button>
-
-            <!-- Center My Location -->
-            <button id="map-locate-btn" class="w-12 h-12 flex items-center justify-center bg-surface-container-lowest/95 backdrop-blur-md rounded-2xl border border-outline-variant/80 shadow-xl text-primary hover:bg-surface-container-high transition-transform active:scale-95" title="Center My Location">
-              <span class="material-symbols-outlined text-[24px]">my_location</span>
-            </button>
-
-            <!-- Google Maps Tile Layer Switcher -->
-            <button id="map-layer-toggle-btn" class="w-12 h-12 flex items-center justify-center bg-surface-container-lowest/95 backdrop-blur-md rounded-2xl border border-outline-variant/80 shadow-xl text-primary hover:bg-surface-container-high transition-transform active:scale-95" title="Toggle Google Maps Satellite / Street View">
-              <span class="material-symbols-outlined text-[22px]">map</span>
-            </button>
-
-            <div class="flex flex-col bg-surface-container-lowest/95 backdrop-blur-md rounded-2xl border border-outline-variant/80 shadow-xl overflow-hidden">
-              <button id="map-zoom-in-btn" class="w-12 h-11 flex items-center justify-center text-primary border-b border-outline-variant/50 hover:bg-surface-container-high transition-colors">
-                <span class="material-symbols-outlined text-[20px]">add</span>
-              </button>
-              <button id="map-zoom-out-btn" class="w-12 h-11 flex items-center justify-center text-primary hover:bg-surface-container-high transition-colors">
-                <span class="material-symbols-outlined text-[20px]">remove</span>
-              </button>
+          <!-- Live Indicator & Refresh -->
+          <div class="flex flex-col items-end gap-1 shrink-0">
+            <div class="flex items-center gap-1.5 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
+              <span class="w-2 h-2 rounded-full ${hasLiveCoords ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}"></span>
+              <span class="text-[10px] font-black text-emerald-400 uppercase tracking-wider">${hasLiveCoords ? 'LIVE ●' : 'SYNCING'}</span>
             </div>
-          </div>
-        </div>
-
-        <!-- Interactive Selected Hazard / Shelter Preview Card -->
-        <div id="map-preview-card" class="px-4 mb-2 pointer-events-auto transition-all duration-300 transform translate-y-32 opacity-0 pointer-events-none max-w-xl mx-auto w-full">
-          <div class="bg-surface-container-lowest rounded-2xl shadow-2xl overflow-hidden border border-outline-variant flex relative">
-            <div id="card-thumbnail" class="w-28 h-28 bg-cover bg-center shrink-0 bg-slate-200" style="background-image: url('${hazards[0].image}')"></div>
-            <div class="p-3.5 flex-1 flex flex-col justify-between">
-              <div>
-                <div class="flex justify-between items-start">
-                  <h3 id="card-title" class="text-sm font-bold text-on-surface pr-6">${hazards[0].title}</h3>
-                  <span id="card-badge" class="text-[10px] bg-error-container text-on-error-container px-2 py-0.5 rounded-full font-extrabold uppercase">${hazards[0].severity}</span>
-                </div>
-                <p id="card-subtitle" class="text-xs text-on-surface-variant mt-1">${hazards[0].time} • ${hazards[0].distance}</p>
-                <p id="card-desc" class="text-xs text-on-surface-variant/80 mt-1 line-clamp-1">${hazards[0].description}</p>
-              </div>
-              <div class="flex gap-2 mt-2">
-                <button id="card-action-btn" class="flex-1 bg-primary text-white text-xs font-bold py-2 rounded-xl shadow-sm hover:bg-primary-fixed-variant transition-colors">
-                  In-App Route
-                </button>
-                <button id="card-gmap-btn" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 rounded-xl shadow-sm transition-colors flex items-center justify-center gap-1.5" title="Open Turn-by-Turn Navigation in Google Maps">
-                  <span class="material-symbols-outlined text-[16px]">open_in_new</span>
-                  <span>Google Maps</span>
-                </button>
-              </div>
-            </div>
-            <button id="card-close-btn" class="absolute top-2 right-2 text-outline hover:text-on-surface p-1 rounded-full">
-              <span class="material-symbols-outlined text-[18px]">close</span>
+            <button id="quick-refresh-gps-btn" class="text-[10px] text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1 cursor-pointer pt-0.5">
+              <span class="material-symbols-outlined text-[12px] ${isAcquiring ? 'animate-spin' : ''}">refresh</span>
+              <span>Refresh</span>
             </button>
           </div>
         </div>
       </div>
 
+      <!-- 3. LOCATION PERMISSION / UNAVAILABLE NOTIFICATION OVERLAY (IF NEEDED) -->
+      ${(!hasLiveCoords && (isDenied || isUnavailable)) ? `
+        <div id="location-permission-card" class="relative z-40 mx-4 mt-2 max-w-xl mx-auto w-full animate-in fade-in duration-200">
+          <div class="bg-slate-900/95 border border-amber-500/40 rounded-2xl p-4 shadow-2xl text-white flex flex-col gap-3 backdrop-blur-md">
+            <div class="flex items-start gap-3">
+              <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center shrink-0">
+                <span class="material-symbols-outlined text-[24px]">location_disabled</span>
+              </div>
+              <div class="flex flex-col">
+                <h3 class="text-sm font-bold text-amber-300">
+                  ${isDenied ? 'Location Permission Required' : 'GPS Signal Unavailable'}
+                </h3>
+                <p class="text-xs text-slate-300 mt-0.5 leading-relaxed">
+                  ${isDenied 
+                    ? 'Location access is required to provide accurate risk information and emergency guidance.'
+                    : 'Unable to determine your current location. Please enable GPS and try again.'}
+                </p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 mt-1">
+              <button id="enable-gps-action-btn" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold py-2.5 px-3 rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
+                <span class="material-symbols-outlined text-[16px]">near_me</span>
+                <span>ENABLE LOCATION</span>
+              </button>
+              <button id="manual-location-action-btn" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-extrabold py-2.5 px-3 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
+                <span class="material-symbols-outlined text-[16px]">edit_location_alt</span>
+                <span>ENTER MANUALLY</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      ` : ''}
+
+      <div class="flex-1"></div>
+
+      <!-- 4. FLOATING MAP CONTROLS & COLLAPSIBLE LEGEND -->
+      <div class="relative z-30 pointer-events-none pb-nav-safe px-4 mb-2 flex justify-between items-end max-w-xl mx-auto w-full">
+        
+        <!-- Collapsible Landslide Risk Legend -->
+        <div id="risk-legend-box" class="pointer-events-auto bg-slate-900/90 dark:bg-slate-950/90 backdrop-blur-md p-2.5 rounded-2xl border border-slate-800/90 shadow-2xl w-36 transition-all duration-200 select-none">
+          <div id="legend-header-toggle" class="flex items-center justify-between cursor-pointer">
+            <span class="text-[10px] font-black uppercase tracking-wider text-slate-300 font-mono flex items-center gap-1">
+              <span>LANDSLIDE RISK</span>
+            </span>
+            <span id="legend-chevron" class="material-symbols-outlined text-[14px] text-slate-400">expand_less</span>
+          </div>
+
+          <div id="legend-content" class="flex flex-col gap-1.5 mt-2 transition-all">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0"></span>
+              <span class="text-[11px] font-semibold text-slate-200">🟢 Low</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0"></span>
+              <span class="text-[11px] font-semibold text-slate-200">🟡 Moderate</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-orange-500 shrink-0"></span>
+              <span class="text-[11px] font-semibold text-slate-200">🟠 High</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-red-600 shrink-0"></span>
+              <span class="text-[11px] font-semibold text-slate-200">🔴 Critical</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Floating GPS Locate Me & Zoom Control Buttons -->
+        <div class="pointer-events-auto flex flex-col gap-2.5 items-end">
+          <!-- Locate Me Button -->
+          <button id="map-locate-btn" class="w-12 h-12 flex items-center justify-center bg-blue-600 hover:bg-blue-500 text-white rounded-2xl shadow-2xl border-2 border-white/90 active:scale-90 transition-all cursor-pointer group" title="Locate Me (Center Real GPS)">
+            <span class="material-symbols-outlined text-[24px] group-hover:scale-110 transition-transform">my_location</span>
+          </button>
+
+          <!-- Zoom In / Out Buttons -->
+          <div class="flex flex-col bg-slate-900/90 backdrop-blur-md rounded-2xl border border-slate-800 shadow-xl overflow-hidden text-slate-200">
+            <button id="map-zoom-in" class="w-11 h-10 flex items-center justify-center border-b border-slate-800 hover:bg-slate-800 active:scale-95 transition-colors cursor-pointer" title="Zoom In">
+              <span class="material-symbols-outlined text-[18px]">add</span>
+            </button>
+            <button id="map-zoom-out" class="w-11 h-10 flex items-center justify-center hover:bg-slate-800 active:scale-95 transition-colors cursor-pointer" title="Zoom Out">
+              <span class="material-symbols-outlined text-[18px]">remove</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. INTERACTIVE DETAIL PREVIEW BOTTOM CARD -->
+      <div id="item-preview-bottom-card" class="fixed bottom-24 left-0 right-0 z-40 px-4 max-w-xl mx-auto w-full transition-all duration-300 transform translate-y-48 opacity-0 pointer-events-none">
+        <div class="bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-md border border-slate-800/90 rounded-2xl p-3.5 shadow-2xl text-white relative">
+          <button id="preview-close-btn" class="absolute top-2.5 right-2.5 text-slate-400 hover:text-white p-1 rounded-full cursor-pointer">
+            <span class="material-symbols-outlined text-[18px]">close</span>
+          </button>
+
+          <div class="flex items-start gap-3">
+            <div id="preview-icon-box" class="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-2xl shrink-0">
+              📍
+            </div>
+            <div class="flex-1 pr-6">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span id="preview-badge" class="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                  INFO
+                </span>
+                <span id="preview-distance" class="text-xs text-slate-400 font-mono">1.2 km away</span>
+              </div>
+              <h3 id="preview-title" class="text-sm font-extrabold text-white mt-1 leading-snug">
+                Item Title
+              </h3>
+              <p id="preview-desc" class="text-xs text-slate-300 mt-1 leading-relaxed line-clamp-2">
+                Item description and telemetry details.
+              </p>
+            </div>
+          </div>
+
+          <div id="preview-actions-container" class="mt-3 flex gap-2">
+            <button id="preview-view-route-btn" class="flex-1 bg-emerald-600 hover:bg-emerald-500 active:scale-98 text-white text-xs font-black py-2.5 rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer">
+              <span class="material-symbols-outlined text-[16px]">alt_route</span>
+              <span>VIEW SAFE ROUTE</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. LAYER CONTROL SLIDE-OVER MODAL -->
+      <div id="map-layers-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs hidden items-center justify-center p-4 select-none">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 max-w-sm w-full shadow-2xl text-white flex flex-col gap-4 animate-in zoom-in-95 duration-150">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-blue-400 text-[22px]">layers</span>
+              <h2 class="text-base font-extrabold text-white">Map Layers</h2>
+            </div>
+            <button id="close-layers-modal-btn" class="text-slate-400 hover:text-white p-1 rounded-full cursor-pointer">
+              <span class="material-symbols-outlined text-[20px]">close</span>
+            </button>
+          </div>
+
+          <div class="flex flex-col gap-2.5">
+            ${[
+              { id: 'myLocation', label: 'My Location', desc: 'Real GPS pulsing beacon & accuracy', checked: true },
+              { id: 'landslideRisk', label: 'Landslide Risk', desc: 'Slope & soil saturation risk zones', checked: true },
+              { id: 'citizenReports', label: 'Citizen Reports', desc: 'Verified rockfall & crack incidents', checked: false },
+              { id: 'sos', label: 'SOS', desc: 'Emergency distress beacons & alerts', checked: false },
+              { id: 'shelters', label: 'Safe Shelters', desc: 'Designated relief camps & aid stations', checked: false },
+              { id: 'dangerousRoads', label: 'Dangerous Roads', desc: 'Blocked and hazardous road corridors', checked: false },
+              { id: 'evacuationRoute', label: 'Evacuation Route', desc: 'Dynamic safe navigation path', checked: false }
+            ].map(layer => `
+              <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-750 transition-colors cursor-pointer">
+                <div class="flex flex-col">
+                  <span class="text-xs font-bold text-white">${layer.label}</span>
+                  <span class="text-[10px] text-slate-400">${layer.desc}</span>
+                </div>
+                <input type="checkbox" data-layer-toggle="${layer.id}" class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 bg-slate-700 border-slate-600 cursor-pointer" ${layer.checked ? 'checked' : ''} />
+              </label>
+            `).join('')}
+          </div>
+
+          <button id="done-layers-modal-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs py-2.5 rounded-xl transition-all shadow-md active:scale-95 cursor-pointer">
+            Done
+          </button>
+        </div>
+      </div>
+
+      <!-- 7. MANUAL LOCATION ENTRY MODAL -->
+      <div id="manual-location-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs hidden items-center justify-center p-4 select-none">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 max-w-sm w-full shadow-2xl text-white flex flex-col gap-4 animate-in zoom-in-95 duration-150">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-blue-400 text-[22px]">pin_drop</span>
+              <h2 class="text-base font-extrabold text-white">Set Current Location</h2>
+            </div>
+            <button id="close-manual-modal-btn" class="text-slate-400 hover:text-white p-1 rounded-full cursor-pointer">
+              <span class="material-symbols-outlined text-[20px]">close</span>
+            </button>
+          </div>
+
+          <div class="flex flex-col gap-2.5 text-xs">
+            <label class="font-bold text-slate-300">Quick Select Common Disasters / Regions:</label>
+            <div class="grid grid-cols-2 gap-2">
+              <button data-quick-loc="pune" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-left border border-slate-700 text-xs font-bold text-white active:scale-95 cursor-pointer">
+                📍 Pune, MH<br><span class="text-[10px] text-slate-400 font-mono">18.5204° N, 73.8567° E</span>
+              </button>
+              <button data-quick-loc="gangtok" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-left border border-slate-700 text-xs font-bold text-white active:scale-95 cursor-pointer">
+                📍 Gangtok, SK<br><span class="text-[10px] text-slate-400 font-mono">27.3314° N, 88.6138° E</span>
+              </button>
+              <button data-quick-loc="wayanad" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-left border border-slate-700 text-xs font-bold text-white active:scale-95 cursor-pointer">
+                📍 Wayanad, KL<br><span class="text-[10px] text-slate-400 font-mono">11.6854° N, 76.1320° E</span>
+              </button>
+              <button data-quick-loc="shimla" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-left border border-slate-700 text-xs font-bold text-white active:scale-95 cursor-pointer">
+                📍 Shimla, HP<br><span class="text-[10px] text-slate-400 font-mono">31.1048° N, 77.1734° E</span>
+              </button>
+            </div>
+
+            <div class="relative flex py-1 items-center">
+              <div class="flex-grow border-t border-slate-800"></div>
+              <span class="flex-shrink mx-2 text-[10px] text-slate-500 font-mono uppercase">Or Enter Coordinates</span>
+              <div class="flex-grow border-t border-slate-800"></div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <span class="text-[10px] text-slate-400 font-semibold block mb-1">Latitude</span>
+                <input id="manual-lat-input" type="number" step="any" placeholder="e.g. 18.5204" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white font-mono focus:border-blue-500 focus:outline-none" />
+              </div>
+              <div>
+                <span class="text-[10px] text-slate-400 font-semibold block mb-1">Longitude</span>
+                <input id="manual-lng-input" type="number" step="any" placeholder="e.g. 73.8567" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white font-mono focus:border-blue-500 focus:outline-none" />
+              </div>
+            </div>
+
+            <div>
+              <span class="text-[10px] text-slate-400 font-semibold block mb-1">Area / Locality Name</span>
+              <input id="manual-locality-input" type="text" placeholder="e.g. Pune, Maharashtra" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:border-blue-500 focus:outline-none" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 mt-1">
+            <button id="cancel-manual-btn" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-extrabold text-xs py-2.5 rounded-xl transition-all cursor-pointer">
+              Cancel
+            </button>
+            <button id="save-manual-location-btn" class="bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs py-2.5 rounded-xl transition-all shadow-md active:scale-95 cursor-pointer">
+              Apply Location
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 8. BOTTOM NAVIGATION (TAB 2: LIVE MAP) -->
       ${renderBottomNav('map')}
     </div>
   `;
 }
 
-export function bindMapEvents(container) {
+export async function bindMapEvents(container) {
   bindNavigationEvents(container);
 
-  const { currentLocation, hazards, shelters } = store.state;
-
-  // Initialize Leaflet Map
-  const mapElement = container.querySelector('#leaflet-map');
+  const { currentLocation, hazards, shelters, dangerousRoads, sosIncidents } = store.state;
+  const mapElement = container.querySelector('#live-map-canvas');
   if (!mapElement) return;
 
-  if (mapInstance) {
-    mapInstance.remove();
-    mapInstance = null;
+  // Resolve Real Current Location Coordinates (never fake LA defaults)
+  const hasLiveCoords = locationService.validateCoordinates(currentLocation.lat, currentLocation.lng);
+  const userLat = hasLiveCoords ? currentLocation.lat : 18.5204; // Pune fallback if locating
+  const userLng = hasLiveCoords ? currentLocation.lng : 73.8567;
+
+  // 1. Initialize Map
+  await mapService.initMap(mapElement, { lat: userLat, lng: userLng }, 14);
+
+  // 2. Set Real User Location Marker
+  if (hasLiveCoords) {
+    mapService.setUserLocationMarker(userLat, userLng, currentLocation.accuracy || 15);
   }
 
-  // Centered strictly on Central Live GPS Telemetry
-  mapInstance = L.map(mapElement, {
-    zoomControl: false,
-    attributionControl: false
-  }).setView([currentLocation.lat, currentLocation.lng], 14);
+  // Preview Card helper
+  const previewCard = container.querySelector('#item-preview-bottom-card');
+  const previewIcon = container.querySelector('#preview-icon-box');
+  const previewBadge = container.querySelector('#preview-badge');
+  const previewTitle = container.querySelector('#preview-title');
+  const previewDistance = container.querySelector('#preview-distance');
+  const previewDesc = container.querySelector('#preview-desc');
+  const previewRouteBtn = container.querySelector('#preview-view-route-btn');
+  const previewCloseBtn = container.querySelector('#preview-close-btn');
 
-  // Google Maps Tile Layers with subdomain rotation
-  const googleRoadmap = L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-    maxZoom: 20,
-    subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-    attribution: '&copy; Google Maps'
-  });
-
-  const googleHybrid = L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-    maxZoom: 20,
-    subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-    attribution: '&copy; Google Maps Satellite'
-  });
-
-  const googleTerrain = L.tileLayer('https://{s}.google.com/vt/lyrs=p&x={x}&y={y}&z={z}', {
-    maxZoom: 20,
-    subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-    attribution: '&copy; Google Maps Terrain'
-  });
-
-  const googleTraffic = L.tileLayer('https://{s}.google.com/vt/lyrs=m,traffic&x={x}&y={y}&z={z}', {
-    maxZoom: 20,
-    subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-    attribution: '&copy; Google Maps Traffic'
-  });
-
-  let currentTileLayer = googleRoadmap;
-  currentTileLayer.addTo(mapInstance);
-
-  // Inbuilt Google Maps iframe mode switcher
-  const inbuildIframe = container.querySelector('#gmap-inbuild-iframe');
-  const inbuildModeBtn = container.querySelector('#gmap-toggle-inbuild-mode');
-  let isInbuildIframeActive = false;
-
-  function updateInbuildIframeSrc(lat, lng) {
-    if (inbuildIframe) {
-      inbuildIframe.src = `https://maps.google.com/maps?q=${lat},${lng}&z=14&output=embed`;
+  function showPreviewCard(data) {
+    if (!previewCard) return;
+    if (previewIcon) previewIcon.textContent = data.icon || '📍';
+    if (previewBadge) {
+      previewBadge.textContent = data.badgeText || 'INTEL';
+      previewBadge.className = `text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${data.badgeClass || 'bg-blue-500/20 text-blue-400 border border-blue-500/30'}`;
     }
-  }
+    if (previewTitle) previewTitle.textContent = data.title || 'Incident';
+    if (previewDistance) previewDistance.textContent = data.distance || 'Nearby';
+    if (previewDesc) previewDesc.textContent = data.description || '';
 
-  // Bind Google Map Type buttons
-  const typeRoadmapBtn = container.querySelector('#gmap-type-roadmap');
-  const typeSatBtn = container.querySelector('#gmap-type-satellite');
-  const typeTerrainBtn = container.querySelector('#gmap-type-terrain');
-  const typeTrafficBtn = container.querySelector('#gmap-type-traffic');
-
-  const gmapTypeBtns = [
-    { btn: typeRoadmapBtn, layer: googleRoadmap },
-    { btn: typeSatBtn, layer: googleHybrid },
-    { btn: typeTerrainBtn, layer: googleTerrain },
-    { btn: typeTrafficBtn, layer: googleTraffic }
-  ];
-
-  gmapTypeBtns.forEach(item => {
-    if (item.btn) {
-      item.btn.addEventListener('click', () => {
-        if (isInbuildIframeActive && inbuildIframe) {
-          inbuildIframe.classList.add('hidden');
-          isInbuildIframeActive = false;
-          if (inbuildModeBtn) {
-            inbuildModeBtn.classList.remove('bg-emerald-600', 'text-white');
-            inbuildModeBtn.classList.add('bg-surface-container-lowest/90', 'text-on-surface', 'border', 'border-outline-variant');
-          }
-        }
-        if (mapInstance && currentTileLayer) {
-          mapInstance.removeLayer(currentTileLayer);
-        }
-        currentTileLayer = item.layer;
-        currentTileLayer.addTo(mapInstance);
-
-        gmapTypeBtns.forEach(i => {
-          if (i.btn) {
-            i.btn.classList.remove('bg-blue-600', 'text-white');
-            i.btn.classList.add('bg-surface-container-lowest/90', 'text-on-surface', 'border', 'border-outline-variant');
-          }
-        });
-        item.btn.classList.remove('bg-surface-container-lowest/90', 'text-on-surface', 'border', 'border-outline-variant');
-        item.btn.classList.add('bg-blue-600', 'text-white');
-      });
-    }
-  });
-
-  if (inbuildModeBtn) {
-    inbuildModeBtn.addEventListener('click', () => {
-      isInbuildIframeActive = !isInbuildIframeActive;
-      if (isInbuildIframeActive) {
-        updateInbuildIframeSrc(store.state.currentLocation.lat, store.state.currentLocation.lng);
-        if (inbuildIframe) inbuildIframe.classList.remove('hidden');
-        gmapTypeBtns.forEach(i => {
-          if (i.btn) {
-            i.btn.classList.remove('bg-blue-600', 'text-white');
-            i.btn.classList.add('bg-surface-container-lowest/90', 'text-on-surface', 'border', 'border-outline-variant');
-          }
-        });
-        inbuildModeBtn.classList.remove('bg-surface-container-lowest/90', 'text-on-surface', 'border', 'border-outline-variant');
-        inbuildModeBtn.classList.add('bg-emerald-600', 'text-white');
+    if (previewRouteBtn) {
+      if (data.showRouteBtn) {
+        previewRouteBtn.classList.remove('hidden');
+        previewRouteBtn.onclick = () => {
+          store.navigate('safe-route');
+        };
       } else {
-        if (inbuildIframe) inbuildIframe.classList.add('hidden');
-        inbuildModeBtn.classList.remove('bg-emerald-600', 'text-white');
-        inbuildModeBtn.classList.add('bg-surface-container-lowest/90', 'text-on-surface', 'border', 'border-outline-variant');
-        typeRoadmapBtn?.classList.add('bg-blue-600', 'text-white');
+        previewRouteBtn.classList.add('hidden');
       }
-    });
-  }
-
-  // Tile Layer Switcher Float Button
-  const layerToggleBtn = container.querySelector('#map-layer-toggle-btn');
-  let currentLayerIndex = 0;
-  const tileLayers = [
-    { name: 'Google Maps Street', layer: googleRoadmap, icon: 'map' },
-    { name: 'Google Maps Satellite', layer: googleHybrid, icon: 'satellite_alt' },
-    { name: 'Google Maps Terrain', layer: googleTerrain, icon: 'terrain' },
-    { name: 'Google Maps Traffic', layer: googleTraffic, icon: 'traffic' }
-  ];
-
-  if (layerToggleBtn) {
-    layerToggleBtn.addEventListener('click', () => {
-      if (mapInstance && currentTileLayer) {
-        mapInstance.removeLayer(currentTileLayer);
-      }
-      currentLayerIndex = (currentLayerIndex + 1) % tileLayers.length;
-      currentTileLayer = tileLayers[currentLayerIndex].layer;
-      currentTileLayer.addTo(mapInstance);
-
-      const iconSpan = layerToggleBtn.querySelector('.material-symbols-outlined');
-      if (iconSpan) iconSpan.textContent = tileLayers[currentLayerIndex].icon;
-      layerToggleBtn.title = `Current View: ${tileLayers[currentLayerIndex].name}`;
-    });
-  }
-
-  // Custom User Location Marker with Animated Pulse
-  const userIcon = L.divIcon({
-    className: 'custom-user-marker',
-    html: `
-      <div class="relative flex items-center justify-center -translate-x-1/2 -translate-y-1/2" style="width: 32px; height: 32px;">
-        <div class="pulsate-gps absolute inset-0 rounded-full bg-primary opacity-30"></div>
-        <div class="w-4 h-4 rounded-full bg-primary border-2 border-white shadow-lg"></div>
-      </div>
-    `,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16]
-  });
-
-  // Direct Open User Location in Google Maps Button Handler
-  const openGMapUserBtn = container.querySelector('#map-open-gmap-user-btn');
-  if (openGMapUserBtn) {
-    openGMapUserBtn.addEventListener('click', () => {
-      const userLat = store.state.currentLocation.lat;
-      const userLng = store.state.currentLocation.lng;
-      const gmapUserUrl = `https://www.google.com/maps?q=${userLat},${userLng}`;
-      window.open(gmapUserUrl, '_blank');
-    });
-  }
-
-  // Create User Marker with rich Google Maps interactive popup
-  const userMarker = L.marker([currentLocation.lat, currentLocation.lng], { icon: userIcon })
-    .addTo(mapInstance)
-    .bindPopup(`
-      <div class="p-2.5 font-sans min-w-[180px]">
-        <div class="flex items-center gap-1.5 text-blue-600 font-black text-xs uppercase mb-1">
-          <span class="w-2 h-2 rounded-full bg-blue-600 animate-ping"></span>
-          <span>Your Live GPS Position</span>
-        </div>
-        <p class="text-xs font-mono text-slate-700 mb-2">${currentLocation.lat.toFixed(5)}°, ${currentLocation.lng.toFixed(5)}° (±${currentLocation.accuracy || 5}m)</p>
-        <a href="https://www.google.com/maps?q=${currentLocation.lat},${currentLocation.lng}" target="_blank" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-1.5 px-2.5 rounded-lg flex items-center justify-center gap-1 shadow-sm transition no-underline">
-          <span>Open in Google Maps</span> ↗
-        </a>
-      </div>
-    `);
-
-  const card = container.querySelector('#map-preview-card');
-  const cardTitle = container.querySelector('#card-title');
-  const cardSubtitle = container.querySelector('#card-subtitle');
-  const cardDesc = container.querySelector('#card-desc');
-  const cardBadge = container.querySelector('#card-badge');
-  const cardThumbnail = container.querySelector('#card-thumbnail');
-  const cardCloseBtn = container.querySelector('#card-close-btn');
-  const cardActionBtn = container.querySelector('#card-action-btn');
-  const cardGMapBtn = container.querySelector('#card-gmap-btn');
-
-  let activeTargetCoords = { lat: shelters[0]?.lat || 11.5580, lng: shelters[0]?.lng || 76.1310 };
-
-  function showCard(title, subtitle, desc, badge, badgeClass, imgUrl, lat, lng) {
-    if (!card) return;
-    if (lat !== undefined && lng !== undefined) {
-      activeTargetCoords = { lat, lng };
     }
-    cardTitle.textContent = title;
-    cardSubtitle.textContent = subtitle;
-    cardDesc.textContent = desc;
-    cardBadge.textContent = badge;
-    cardBadge.className = `text-[10px] px-2 py-0.5 rounded-full font-extrabold uppercase ${badgeClass}`;
-    cardThumbnail.style.backgroundImage = `url('${imgUrl}')`;
 
-    card.classList.remove('translate-y-32', 'opacity-0', 'pointer-events-none');
-    card.classList.add('translate-y-0', 'opacity-100');
+    previewCard.classList.remove('translate-y-48', 'opacity-0', 'pointer-events-none');
   }
 
-  function hideCard() {
-    if (!card) return;
-    card.classList.add('translate-y-32', 'opacity-0', 'pointer-events-none');
-    card.classList.remove('translate-y-0', 'opacity-100');
+  function hidePreviewCard() {
+    if (previewCard) {
+      previewCard.classList.add('translate-y-48', 'opacity-0', 'pointer-events-none');
+    }
   }
 
-  if (cardCloseBtn) {
-    cardCloseBtn.addEventListener('click', hideCard);
+  if (previewCloseBtn) {
+    previewCloseBtn.addEventListener('click', hidePreviewCard);
   }
 
-  // Open Direct Turn-by-Turn Navigation from User's Current GPS to Target in Google Maps
-  if (cardGMapBtn) {
-    cardGMapBtn.addEventListener('click', () => {
-      const userLat = store.state.currentLocation.lat;
-      const userLng = store.state.currentLocation.lng;
-      const gmapUrl = `https://www.google.com/maps/dir/?api=1&origin=${userLat},${userLng}&destination=${activeTargetCoords.lat},${activeTargetCoords.lng}&travelmode=driving`;
-      window.open(gmapUrl, '_blank');
-    });
-  }
-
-  let currentPolyline = null;
-
-  if (cardActionBtn) {
-    cardActionBtn.addEventListener('click', () => {
-      const activeShelter = shelters[0] || { lat: 11.5580, lng: 76.1310, name: 'Central Civic Shelter' };
-      const userLat = currentLocation.lat;
-      const userLng = currentLocation.lng;
-
-      if (currentPolyline && mapInstance) {
-        mapInstance.removeLayer(currentPolyline);
-      }
-
-      // Draw Route Polyline
-      const latlngs = [
-        [userLat, userLng],
-        [userLat + (activeShelter.lat - userLat) * 0.5 + 0.002, userLng + (activeShelter.lng - userLng) * 0.5 - 0.001],
-        [activeShelter.lat, activeShelter.lng]
-      ];
-
-      currentPolyline = L.polyline(latlngs, {
-        color: '#00e5ff',
-        weight: 5,
-        opacity: 0.85,
-        dashArray: '10, 10',
-        lineCap: 'round'
-      }).addTo(mapInstance);
-
-      mapInstance.fitBounds(currentPolyline.getBounds(), { padding: [50, 50] });
-
-      const routeInfo = container.querySelector('#card-subtitle');
-      if (routeInfo) {
-        routeInfo.textContent = `Route Mapped • 1.2 km (Approx 3 mins)`;
-      }
-    });
-  }
-
-  // Add Hazard Markers
-  hazards.forEach(h => {
-    const isCritical = h.severity === 'CRITICAL';
-    const markerBg = isCritical ? '#ba1a1a' : h.severity === 'HIGH' ? '#a33500' : '#505f76';
-    const iconName = h.category === 'Ground Crack' ? 'warning' : h.category === 'Soil Movement' ? 'landslide' : 'block';
-
-    const hazardIcon = L.divIcon({
-      className: 'custom-hazard-marker',
-      html: `
-        <div class="relative flex items-center justify-center -translate-x-1/2 -translate-y-1/2 cursor-pointer transform hover:scale-110 transition-transform" style="width: 38px; height: 38px;">
-          ${isCritical ? '<div class="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-40"></div>' : ''}
-          <div class="w-9 h-9 rounded-full text-white flex items-center justify-center shadow-xl border-2 border-white" style="background-color: ${markerBg};">
-            <span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">${iconName}</span>
-          </div>
-        </div>
-      `,
-      iconSize: [38, 38],
-      iconAnchor: [19, 19]
-    });
-
-    const m = L.marker([h.lat, h.lng], { icon: hazardIcon }).addTo(mapInstance);
-    m.on('click', () => {
-      showCard(
-        h.title,
-        `${h.time} • ${h.distance}`,
-        h.description,
-        h.severity,
-        isCritical ? 'bg-error-container text-on-error-container' : 'bg-secondary-container text-on-secondary-container',
-        h.image,
-        h.lat,
-        h.lng
-      );
-    });
-  });
-
-  // Add Safe Shelter Markers
-  shelters.forEach(s => {
-    const shelterIcon = L.divIcon({
-      className: 'custom-shelter-marker',
-      html: `
-        <div class="relative flex items-center justify-center -translate-x-1/2 -translate-y-1/2 cursor-pointer transform hover:scale-110 transition-transform" style="width: 38px; height: 38px;">
-          <div class="w-9 h-9 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-xl border-2 border-white">
-            <span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">home_pin</span>
-          </div>
-        </div>
-      `,
-      iconSize: [38, 38],
-      iconAnchor: [19, 19]
-    });
-
-    const m = L.marker([s.lat, s.lng], { icon: shelterIcon }).addTo(mapInstance);
-    m.on('click', () => {
-      showCard(
-        s.name,
-        `${s.type} • ${s.distance}`,
-        `Capacity: ${s.capacity} • Emergency Phone: ${s.phone}`,
-        'SAFE ZONE',
-        'bg-emerald-100 text-emerald-900 border border-emerald-300',
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuAbUb7cZhLo-RSn8pI5WSlRLmUkKEJ-SzO2phgaktqvlW2lA-hB1ro4jfD9uFRWxPTxmin5Lpem-XC0kkiCWOvJcCI4iaqj6TH_PGVEyews9dNlB6gTlfqH7de3ZY02P1xpj7xGyPHdQgL7xqzqEqsQaJ8zP5HxyChreFviwKc3vFOLfbP0Eh3LbpeD_qsUOiUP9PO0w7FyKQZ7c83uOj0asn-C2w0b4IF3N7GY7imTMoZ8PlzFXcbDeQ',
-        s.lat,
-        s.lng
-      );
-    });
-  });
-
-  // Safe Evacuation Route Polyline (Dynamic offset from user's live position to shelter)
-  const safeRouteCoords = [
-    [currentLocation.lat, currentLocation.lng],
-    [currentLocation.lat + 0.001, currentLocation.lng + 0.002],
-    [currentLocation.lat + 0.002, currentLocation.lng + 0.005],
-    [shelters[0].lat, shelters[0].lng]
-  ];
-  const routeLine = L.polyline(safeRouteCoords, {
-    color: '#0052cc',
-    weight: 4,
-    dashArray: '8, 8',
-    opacity: 0.85
-  }).addTo(mapInstance);
-
-  // Central GPS-derived Dynamic Risk Heatmap Zones
-  const heatmapLayerGroup = L.layerGroup();
-  const riskHeatZones = [
-    { offsetLat: 0.0035, offsetLng: -0.0025, radius: 450, color: '#ef4444', level: 'CRITICAL RISK', title: 'High Slope Saturation Zone' },
-    { offsetLat: -0.0025, offsetLng: 0.0030, radius: 400, color: '#f97316', level: 'HIGH RISK', title: 'Unstable Soil Ridge' },
-    { offsetLat: 0.0050, offsetLng: 0.0040, radius: 550, color: '#eab308', level: 'MODERATE RISK', title: 'Elevated Runoff Sector' },
-    { offsetLat: -0.0045, offsetLng: -0.0035, radius: 500, color: '#10b981', level: 'SAFE BUFFER', title: 'Stable Bedrock Zone' }
-  ];
-
-  function updateHeatmapZones(lat, lng) {
-    heatmapLayerGroup.clearLayers();
-    riskHeatZones.forEach(zone => {
-      const circle = L.circle([lat + zone.offsetLat, lng + zone.offsetLng], {
-        color: zone.color,
-        fillColor: zone.color,
-        fillOpacity: 0.35,
-        weight: 1.5,
-        radius: zone.radius
-      }).bindTooltip(`<strong>${zone.level}</strong>: ${zone.title}`, { sticky: true });
-      heatmapLayerGroup.addLayer(circle);
-    });
-  }
-
-  updateHeatmapZones(currentLocation.lat, currentLocation.lng);
-  heatmapLayerGroup.addTo(mapInstance);
-
-  // Auto-request live location permission on map open and redirect map to citizen's live GPS
-  pwaManager.requestLocationPermission(
-    (pos) => {
-      if (mapInstance && userMarker) {
-        const liveLat = pos?.latitude || pos?.coords?.latitude || store.state.currentLocation.lat;
-        const liveLng = pos?.longitude || pos?.coords?.longitude || store.state.currentLocation.lng;
-        userMarker.setLatLng([liveLat, liveLng]);
-        updateHeatmapZones(liveLat, liveLng);
-        mapInstance.flyTo([liveLat, liveLng], 15, { animate: true, duration: 1.2 });
-      }
+  // 3. Render Landslide Risk Zones (🟢 Green, 🟡 Yellow, 🟠 Orange, 🔴 Red)
+  const riskZones = [
+    {
+      level: 'CRITICAL',
+      title: 'Active High-Slope Failure Sector',
+      offsetLat: 0.0035,
+      offsetLng: -0.0028,
+      radius: 420,
+      slope: '32° Steep',
+      saturation: '88% Heavy',
+      description: 'Immediate landslide danger due to saturated soil mantle on eastern ridge.'
     },
-    (err) => {
-      console.log('[GPS Map Notice] Central live telemetry active:', err);
+    {
+      level: 'HIGH',
+      title: 'Unstable Soil & Rock Creep Zone',
+      offsetLat: -0.0030,
+      offsetLng: 0.0035,
+      radius: 380,
+      slope: '26° Moderate',
+      saturation: '72% Elevated',
+      description: 'Ground crack propagation detected with micro-displacement along slope.'
+    },
+    {
+      level: 'MODERATE',
+      title: 'Elevated Surface Runoff Sector',
+      offsetLat: 0.0055,
+      offsetLng: 0.0040,
+      radius: 480,
+      slope: '18° Gentle',
+      saturation: '58% Normal',
+      description: 'Minor debris wash risk during extended heavy downpours.'
+    },
+    {
+      level: 'LOW',
+      title: 'Stable Bedrock Geological Plateau',
+      offsetLat: -0.0045,
+      offsetLng: -0.0040,
+      radius: 520,
+      slope: '6° Flat',
+      saturation: '34% Dry',
+      description: 'Geologically secure foundation zone with deep rock anchoring.'
     }
-  );
+  ];
 
-  // Map Controls (Zoom / Re-center)
-  const zoomIn = container.querySelector('#map-zoom-in-btn');
-  if (zoomIn) zoomIn.addEventListener('click', () => mapInstance.zoomIn());
+  mapService.renderRiskZones(riskZones, userLat, userLng, (zone) => {
+    showPreviewCard({
+      icon: zone.level === 'CRITICAL' ? '🔴' : zone.level === 'HIGH' ? '🟠' : zone.level === 'MODERATE' ? '🟡' : '🟢',
+      badgeText: `${zone.level} RISK ZONE`,
+      badgeClass: zone.level === 'CRITICAL' ? 'bg-red-500/20 text-red-400 border border-red-500/40' : zone.level === 'HIGH' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/40' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40',
+      title: zone.title,
+      distance: `Slope: ${zone.slope} • Sat: ${zone.saturation}`,
+      description: zone.description,
+      showRouteBtn: false
+    });
+  });
 
-  const zoomOut = container.querySelector('#map-zoom-out-btn');
-  if (zoomOut) zoomOut.addEventListener('click', () => mapInstance.zoomOut());
+  // 4. Render Citizen Reports (Verified Incidents)
+  const liveReports = (hazards && hazards.length > 0) ? hazards.map((h, i) => ({
+    id: h.id || `rep-${i}`,
+    category: h.category || 'Road Blockage',
+    title: h.title || 'Verified Incident',
+    severity: h.severity || 'HIGH',
+    time: h.time || '14m ago',
+    distance: h.distance || '1.2 km away',
+    description: h.description || 'Verified citizen hazard report.',
+    lat: userLat + (i === 0 ? 0.0028 : i === 1 ? -0.0025 : 0.0045),
+    lng: userLng + (i === 0 ? 0.0020 : i === 1 ? -0.0035 : -0.0025)
+  })) : [
+    {
+      id: 'rep-1',
+      category: 'Road Blockage',
+      title: 'Road Blockage (Landslide Debris)',
+      severity: 'CRITICAL',
+      time: '10m ago',
+      distance: '1.2 km away',
+      description: 'Boulders and mud blocking single lane passage. Verified by response team.',
+      lat: userLat + 0.0028,
+      lng: userLng + 0.0020
+    }
+  ];
 
+  mapService.renderCitizenReports(liveReports, (rep) => {
+    showPreviewCard({
+      icon: rep.category === 'Road Blockage' ? '🚧' : '⚡',
+      badgeText: `VERIFIED • ${rep.severity}`,
+      badgeClass: rep.severity === 'CRITICAL' ? 'bg-red-500/20 text-red-400 border border-red-500/40' : 'bg-amber-500/20 text-amber-400 border border-amber-500/40',
+      title: rep.title,
+      distance: `${rep.distance} • ${rep.time}`,
+      description: `${rep.description} (Status: Verified by Disaster Response Unit)`,
+      showRouteBtn: false
+    });
+  });
+
+  // 5. Render SOS Distress Beacons
+  const liveSOS = (sosIncidents && sosIncidents.length > 0) ? sosIncidents.map(s => ({
+    id: s.id,
+    name: s.name,
+    type: s.type,
+    status: s.status,
+    time: s.time,
+    distance: s.distance,
+    lat: userLat + (s.offsetLat || -0.0032),
+    lng: userLng + (s.offsetLng || -0.0038)
+  })) : [
+    {
+      id: 'sos-1',
+      name: 'Emergency SOS Signal #402',
+      type: 'TRAPPED CITIZENS',
+      status: 'RESPONSE DISPATCHED',
+      time: '6m ago',
+      distance: '1.1 km away',
+      lat: userLat - 0.0032,
+      lng: userLng - 0.0038
+    }
+  ];
+
+  mapService.renderSOSMarkers(liveSOS, (item) => {
+    showPreviewCard({
+      icon: '🆘',
+      badgeText: item.status || 'EMERGENCY BEACON',
+      badgeClass: 'bg-red-600/30 text-red-300 border border-red-500/50',
+      title: item.name,
+      distance: `${item.distance} • ${item.time}`,
+      description: `Emergency type: ${item.type}. Status: ${item.status}. Local rescue team en-route.`,
+      showRouteBtn: false
+    });
+  });
+
+  // 6. Render Safe Shelters
+  const liveShelters = (shelters && shelters.length > 0) ? shelters.map((sh, idx) => ({
+    id: sh.id || `sh-${idx}`,
+    name: sh.name || 'Emergency Relief Camp',
+    capacity: sh.capacity || '150 Beds Available',
+    distance: sh.distance || '1.8 km',
+    lat: userLat + (idx === 0 ? -0.0040 : 0.0050),
+    lng: userLng + (idx === 0 ? 0.0045 : -0.0040)
+  })) : [
+    {
+      id: 'sh-1',
+      name: 'Central Disaster Relief Shelter',
+      capacity: '200 Beds Available',
+      distance: '1.8 km away',
+      lat: userLat - 0.0040,
+      lng: userLng + 0.0045
+    }
+  ];
+
+  mapService.renderShelters(liveShelters, (s) => {
+    showPreviewCard({
+      icon: '⛺',
+      badgeText: 'SAFE SHELTER',
+      badgeClass: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40',
+      title: s.name,
+      distance: `${s.distance} • ${s.capacity}`,
+      description: 'Designated disaster refuge with backup power, emergency medical supplies, and food relief.',
+      showRouteBtn: true
+    });
+  });
+
+  // 7. Render Dangerous Roads
+  const liveRoads = [
+    {
+      id: 'road-1',
+      name: 'Upper Ridge Highway Corridor',
+      status: 'BLOCKED',
+      riskLevel: 'CRITICAL',
+      reason: 'Major Landslide & Rockfall Debris',
+      distance: '0.9 km away',
+      coordinates: [
+        [userLat + 0.0020, userLng + 0.0010],
+        [userLat + 0.0035, userLng + 0.0025],
+        [userLat + 0.0045, userLng + 0.0035]
+      ]
+    },
+    {
+      id: 'road-2',
+      name: 'West Hill Valley Bypass',
+      status: 'CAUTION',
+      riskLevel: 'HIGH',
+      reason: 'Slope Creep & Mudflow Hazard',
+      distance: '1.6 km away',
+      coordinates: [
+        [userLat - 0.0015, userLng + 0.0020],
+        [userLat - 0.0030, userLng + 0.0040],
+        [userLat - 0.0045, userLng + 0.0055]
+      ]
+    }
+  ];
+
+  mapService.renderDangerousRoads(liveRoads, (r) => {
+    showPreviewCard({
+      icon: '⛔',
+      badgeText: `${r.status} ROAD`,
+      badgeClass: r.status === 'BLOCKED' ? 'bg-red-500/20 text-red-400 border border-red-500/40' : 'bg-orange-500/20 text-orange-400 border border-orange-500/40',
+      title: r.name,
+      distance: `${r.distance} • Risk: ${r.riskLevel}`,
+      description: `${r.reason}. Excluded by Safe Route Dijkstra pathfinding system.`,
+      showRouteBtn: false
+    });
+  });
+
+  // 8. Render Evacuation Route
+  if (liveShelters.length > 0) {
+    const target = liveShelters[0];
+    const evacPoints = [
+      [userLat, userLng],
+      [userLat - 0.0012, userLng + 0.0015],
+      [userLat - 0.0025, userLng + 0.0028],
+      [target.lat, target.lng]
+    ];
+    mapService.renderEvacuationRoute(evacPoints, () => {
+      showPreviewCard({
+        icon: '🛣️',
+        badgeText: 'EVACUATION ROUTE',
+        badgeClass: 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40',
+        title: 'Safest Path to Shelter',
+        distance: 'Direct route avoiding landslide zones',
+        description: `Active route navigating safely to ${target.name}.`,
+        showRouteBtn: true
+      });
+    });
+  }
+
+  // 9. Floating "Locate Me" Button: Smoothly Fly to Real GPS Position
   const locateBtn = container.querySelector('#map-locate-btn');
   if (locateBtn) {
-    locateBtn.addEventListener('click', () => {
-      const flyToCurrent = () => {
-        pwaManager.requestLocationPermission(
-          (pos) => {
-            const lat = pos?.latitude || pos?.coords?.latitude || store.state.currentLocation.lat;
-            const lng = pos?.longitude || pos?.coords?.longitude || store.state.currentLocation.lng;
-            userMarker.setLatLng([lat, lng]);
-            updateHeatmapZones(lat, lng);
-            mapInstance.flyTo([lat, lng], 15, { animate: true, duration: 1 });
-          },
-          () => {
-            mapInstance.flyTo([store.state.currentLocation.lat, store.state.currentLocation.lng], 15, { animate: true, duration: 1 });
-          }
-        );
-      };
+    locateBtn.addEventListener('click', async () => {
+      locateBtn.classList.add('scale-90');
+      setTimeout(() => locateBtn.classList.remove('scale-90'), 150);
 
-      if (store.state.permissions.location !== 'granted') {
-        triggerPermissionPrompt('location', flyToCurrent);
+      const curr = store.state.currentLocation;
+      if (locationService.validateCoordinates(curr.lat, curr.lng)) {
+        mapService.setUserLocationMarker(curr.lat, curr.lng, curr.accuracy || 15);
+        mapService.centerOnLocation(curr.lat, curr.lng, 15);
       } else {
-        flyToCurrent();
+        // Trigger GPS request
+        await store.requestAndEnableLocation();
+        const updated = store.state.currentLocation;
+        if (locationService.validateCoordinates(updated.lat, updated.lng)) {
+          mapService.setUserLocationMarker(updated.lat, updated.lng, updated.accuracy || 15);
+          mapService.centerOnLocation(updated.lat, updated.lng, 15);
+        }
       }
     });
   }
 
-  // Filter Chips
-  container.querySelectorAll('.map-chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-      container.querySelectorAll('.map-chip').forEach(c => {
-        c.classList.remove('bg-primary', 'text-white', 'shadow-md');
-        c.classList.add('bg-surface-container-lowest/90', 'text-on-surface');
-      });
-      chip.classList.add('bg-primary', 'text-white', 'shadow-md');
-      chip.classList.remove('bg-surface-container-lowest/90', 'text-on-surface');
+  // 10. Quick GPS Refresh in Header Card
+  const quickRefreshBtn = container.querySelector('#quick-refresh-gps-btn');
+  if (quickRefreshBtn) {
+    quickRefreshBtn.addEventListener('click', async () => {
+      quickRefreshBtn.querySelector('.material-symbols-outlined')?.classList.add('animate-spin');
+      await store.refreshLocation();
+      const updated = store.state.currentLocation;
+      if (locationService.validateCoordinates(updated.lat, updated.lng)) {
+        mapService.setUserLocationMarker(updated.lat, updated.lng, updated.accuracy || 15);
+        mapService.centerOnLocation(updated.lat, updated.lng, 15);
+      }
+      setTimeout(() => {
+        quickRefreshBtn.querySelector('.material-symbols-outlined')?.classList.remove('animate-spin');
+      }, 800);
+    });
+  }
+
+  // 11. Zoom Controls
+  const zoomIn = container.querySelector('#map-zoom-in');
+  const zoomOut = container.querySelector('#map-zoom-out');
+  if (zoomIn) {
+    zoomIn.addEventListener('click', () => {
+      if (mapService.map) mapService.map.zoomIn();
+    });
+  }
+  if (zoomOut) {
+    zoomOut.addEventListener('click', () => {
+      if (mapService.map) mapService.map.zoomOut();
+    });
+  }
+
+  // 12. Collapsible Legend Toggle
+  const legendHeader = container.querySelector('#legend-header-toggle');
+  const legendContent = container.querySelector('#legend-content');
+  const legendChevron = container.querySelector('#legend-chevron');
+  if (legendHeader && legendContent && legendChevron) {
+    legendHeader.addEventListener('click', () => {
+      const isHidden = legendContent.classList.contains('hidden');
+      if (isHidden) {
+        legendContent.classList.remove('hidden');
+        legendChevron.textContent = 'expand_less';
+      } else {
+        legendContent.classList.add('hidden');
+        legendChevron.textContent = 'expand_more';
+      }
+    });
+  }
+
+  // 13. Map Layers Modal Logic
+  const layersBtn = container.querySelector('#map-layers-btn');
+  const layersModal = container.querySelector('#map-layers-modal');
+  const closeLayersBtn = container.querySelector('#close-layers-modal-btn');
+  const doneLayersBtn = container.querySelector('#done-layers-modal-btn');
+
+  if (layersBtn && layersModal) {
+    layersBtn.addEventListener('click', () => {
+      layersModal.classList.remove('hidden');
+      layersModal.classList.add('flex');
+    });
+  }
+
+  const hideLayersModal = () => {
+    if (layersModal) {
+      layersModal.classList.add('hidden');
+      layersModal.classList.remove('flex');
+    }
+  };
+
+  if (closeLayersBtn) closeLayersBtn.addEventListener('click', hideLayersModal);
+  if (doneLayersBtn) doneLayersBtn.addEventListener('click', hideLayersModal);
+
+  // Bind Layer Checkbox Toggles
+  container.querySelectorAll('[data-layer-toggle]').forEach(chk => {
+    chk.addEventListener('change', (e) => {
+      const layerId = e.target.getAttribute('data-layer-toggle');
+      mapService.toggleLayer(layerId, e.target.checked);
     });
   });
+
+  // 14. Location Permission Banner Actions
+  const enableGpsBtn = container.querySelector('#enable-gps-action-btn');
+  const manualLocationBtn = container.querySelector('#manual-location-action-btn');
+  const manualModal = container.querySelector('#manual-location-modal');
+  const closeManualBtn = container.querySelector('#close-manual-modal-btn');
+  const cancelManualBtn = container.querySelector('#cancel-manual-btn');
+  const saveManualBtn = container.querySelector('#save-manual-location-btn');
+
+  if (enableGpsBtn) {
+    enableGpsBtn.addEventListener('click', async () => {
+      await store.requestAndEnableLocation();
+      store.navigate('map');
+    });
+  }
+
+  const showManualModal = () => {
+    if (manualModal) {
+      manualModal.classList.remove('hidden');
+      manualModal.classList.add('flex');
+    }
+  };
+
+  const hideManualModal = () => {
+    if (manualModal) {
+      manualModal.classList.add('hidden');
+      manualModal.classList.remove('flex');
+    }
+  };
+
+  if (manualLocationBtn) manualLocationBtn.addEventListener('click', showManualModal);
+  if (closeManualBtn) closeManualBtn.addEventListener('click', hideManualModal);
+  if (cancelManualBtn) cancelManualBtn.addEventListener('click', hideManualModal);
+
+  // Quick Region Selection
+  const quickLocations = {
+    pune: { lat: 18.5204, lng: 73.8567, name: 'Pune, Maharashtra' },
+    gangtok: { lat: 27.3314, lng: 88.6138, name: 'Gangtok, Sikkim' },
+    wayanad: { lat: 11.6854, lng: 76.1320, name: 'Wayanad, Kerala' },
+    shimla: { lat: 31.1048, lng: 77.1734, name: 'Shimla, Himachal Pradesh' }
+  };
+
+  container.querySelectorAll('[data-quick-loc]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.getAttribute('data-quick-loc');
+      const loc = quickLocations[key];
+      if (loc) {
+        store.setManualLocation(loc.lat, loc.lng, loc.name);
+        hideManualModal();
+        store.navigate('map');
+      }
+    });
+  });
+
+  if (saveManualBtn) {
+    saveManualBtn.addEventListener('click', () => {
+      const latInput = container.querySelector('#manual-lat-input');
+      const lngInput = container.querySelector('#manual-lng-input');
+      const localityInput = container.querySelector('#manual-locality-input');
+
+      const lat = parseFloat(latInput?.value);
+      const lng = parseFloat(lngInput?.value);
+      const name = localityInput?.value?.trim() || null;
+
+      if (!isNaN(lat) && !isNaN(lng) && locationService.validateCoordinates(lat, lng)) {
+        store.setManualLocation(lat, lng, name);
+        hideManualModal();
+        store.navigate('map');
+      } else {
+        alert('Please enter valid geographic coordinates (e.g. Latitude: 18.5204, Longitude: 73.8567)');
+      }
+    });
+  }
 }

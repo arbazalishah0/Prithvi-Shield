@@ -164,6 +164,79 @@ def init_db():
         cursor.execute("ALTER TABLE citizen_hazard_reports ADD COLUMN image_path TEXT")
     except Exception: pass
 
+    # 5. Citizen FCM Devices Table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS citizen_devices (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            fcm_token TEXT UNIQUE NOT NULL,
+            platform TEXT DEFAULT 'android',
+            name TEXT,
+            email TEXT,
+            phone TEXT,
+            region TEXT DEFAULT 'All Regions',
+            preferred_language TEXT DEFAULT 'English',
+            notification_enabled INTEGER DEFAULT 1,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+
+    # 6. Emergency Alerts Broadcast Table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS emergency_alerts (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            message TEXT NOT NULL,
+            severity TEXT NOT NULL DEFAULT 'WARNING',
+            target_type TEXT DEFAULT 'ALL',
+            target_region TEXT DEFAULT 'All Regions',
+            target_user_id TEXT,
+            created_by TEXT DEFAULT 'PRAHARI Command HQ',
+            safety_instructions_json TEXT,
+            status TEXT DEFAULT 'ACTIVE',
+            created_at TEXT NOT NULL
+        )
+    """)
+
+    # 7. Alert Read Receipts Table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS alert_reads (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            alert_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            read_at TEXT NOT NULL,
+            UNIQUE(alert_id, user_id)
+        )
+    """)
+
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_device_token ON citizen_devices(fcm_token)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_device_user ON citizen_devices(user_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_alerts_target ON emergency_alerts(target_type, target_region)")
+
+    # Seed initial emergency alert if empty
+    cursor.execute("SELECT COUNT(*) as count FROM emergency_alerts")
+    if cursor.fetchone()["count"] == 0:
+        now_seed = datetime.now(timezone.utc).isoformat()
+        cursor.execute("""
+            INSERT INTO emergency_alerts (id, title, message, severity, target_type, target_region, created_by, safety_instructions_json, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', ?)
+        """, (
+            "alert-init-001",
+            "CRITICAL LANDSLIDE WARNING: High Precipitation in Mountain Sectors",
+            "Continuous intense rainfall has destabilized upper soil layers. Avoid road travel through valley passes and mountain corridors.",
+            "CRITICAL",
+            "ALL",
+            "All Regions",
+            "PRAHARI Command State HQ",
+            json.dumps([
+                "Evacuate from designated high-risk slopes immediately.",
+                "Do not traverse unpaved mountain switchbacks or road embankments.",
+                "Tune to PRITHVI-SHIELD emergency broadcasts and follow nearest shelter routing."
+            ]),
+            now_seed
+        ))
+
     conn.commit()
     conn.close()
 
@@ -600,6 +673,125 @@ def update_hazard_report_status(report_id: str, status: str, admin_notes: Option
     conn.commit()
     conn.close()
     return get_hazard_report(report_id)
+
+
+def register_citizen_device(
+    user_id: str,
+    fcm_token: str,
+    platform: str = "android",
+    name: Optional[str] = None,
+    email: Optional[str] = None,
+    phone: Optional[str] = None,
+    region: Optional[str] = "All Regions",
+    preferred_language: Optional[str] = "English"
+) -> Dict[str, Any]:
+    """
+    Registers or updates an FCM device token for a citizen.
+    Prevents duplicate device-tokens, handles token refresh and updates citizen metadata.
+    """
+    now = datetime.now(timezone.utc).isoformat()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO citizen_devices (
+            user_id, fcm_token, platform, name, email, phone, region, preferred_language, notification_enabled, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+        ON CONFLICT(fcm_token) DO UPDATE SET
+            user_id = excluded.user_id,
+            platform = excluded.platform,
+            name = COALESCE(excluded.name, citizen_devices.name),
+            email = COALESCE(excluded.email, citizen_devices.email),
+            phone = COALESCE(excluded.phone, citizen_devices.phone),
+            region = COALESCE(excluded.region, citizen_devices.region),
+            preferred_language = COALESCE(excluded.preferred_language, citizen_devices.preferred_language),
+            updated_at = excluded.updated_at
+    """, (user_id, fcm_token, platform or 'android', name, email, phone, region or 'All Regions', preferred_language or 'English', now, now))
+
+    conn.commit()
+    conn.close()
+    return {
+        "success": True,
+        "message": "Device token registered successfully",
+        "user_id": user_id,
+        "platform": platform or "android"
+    }
+
+
+def get_alerts_for_citizen(user_id: str) -> List[Dict[str, Any]]:
+    """
+    Fetches active emergency alerts targeted for the given citizen,
+    matching either individual user target, citizen region, or global alerts.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Look up citizen's registered region
+    cursor.execute("SELECT region, preferred_language FROM citizen_devices WHERE user_id = ? ORDER BY id DESC LIMIT 1", (user_id,))
+    dev_row = cursor.fetchone()
+    cit_region = (dev_row["region"] if dev_row and dev_row["region"] else "all regions").lower()
+
+    cursor.execute("""
+        SELECT a.*, (CASE WHEN r.id IS NOT NULL THEN 1 ELSE 0 END) as is_read
+        FROM emergency_alerts a
+        LEFT JOIN alert_reads r ON a.id = r.alert_id AND r.user_id = ?
+        WHERE a.status = 'ACTIVE'
+        ORDER BY a.created_at DESC LIMIT 50
+    """, (user_id,))
+    rows = cursor.fetchall()
+    conn.close()
+
+    alerts = []
+    for row in rows:
+        target_type = (row["target_type"] or "ALL").upper()
+        target_reg = (row["target_region"] or "All Regions").lower()
+        target_uid = row["target_user_id"]
+
+        is_match = (
+            target_type == "ALL" or
+            target_reg == "all regions" or
+            target_reg in cit_region or
+            cit_region in target_reg or
+            target_uid == user_id
+        )
+        if is_match:
+            instr = []
+            if row["safety_instructions_json"]:
+                try:
+                    instr = json.loads(row["safety_instructions_json"])
+                except Exception:
+                    pass
+            alerts.append({
+                "id": row["id"],
+                "title": row["title"],
+                "message": row["message"],
+                "severity": row["severity"],
+                "target_region": row["target_region"],
+                "created_by": row["created_by"] or "PRAHARI Command HQ",
+                "sent_at": row["created_at"],
+                "safety_instructions": instr or [
+                    "Avoid steep slopes and road embankments.",
+                    "Keep emergency battery powered devices ready.",
+                    "Follow alerts issued by PRITHVI-SHIELD Command."
+                ],
+                "is_read": bool(row["is_read"])
+            })
+
+    return alerts
+
+
+def mark_alert_read(alert_id: str, user_id: str) -> bool:
+    """Marks an alert as read by a specific citizen."""
+    now = datetime.now(timezone.utc).isoformat()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT OR IGNORE INTO alert_reads (alert_id, user_id, read_at)
+        VALUES (?, ?, ?)
+    """, (alert_id, user_id, now))
+    conn.commit()
+    conn.close()
+    return True
 
 
 # Initialize schema on module import

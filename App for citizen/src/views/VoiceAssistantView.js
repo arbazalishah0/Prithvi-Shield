@@ -169,20 +169,53 @@ export function bindVoiceAssistantEvents(container) {
 
   const micBtn = container.querySelector('#voice-mic-toggle');
   const statusText = container.querySelector('#voice-status-text');
+  const transcriptEl = container.querySelector('#voice-transcript-text');
+
+  // Universal voice state observer
+  const updateVoiceStatus = (state) => {
+    if (!statusText) return;
+    switch (state) {
+      case 'SPEAKING':
+        statusText.className = "text-xs font-bold text-amber-400 uppercase tracking-widest mb-2 animate-pulse flex items-center justify-center gap-1.5";
+        statusText.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-400"></span> 🔊 PRITHVI IS SPEAKING...';
+        break;
+      case 'LISTENING':
+        statusText.className = "text-xs font-bold text-cyan-400 uppercase tracking-widest mb-2 animate-pulse flex items-center justify-center gap-1.5";
+        statusText.innerHTML = '<span class="w-2 h-2 rounded-full bg-cyan-400"></span> 🎙️ LISTENING TO VOICE...';
+        break;
+      case 'THINKING':
+        statusText.className = "text-xs font-bold text-purple-400 uppercase tracking-widest mb-2 animate-pulse flex items-center justify-center gap-1.5";
+        statusText.innerHTML = '<span class="w-2 h-2 rounded-full bg-purple-400"></span> 🧠 AI THINKING...';
+        break;
+      case 'PERMISSION_DENIED':
+        statusText.className = "text-xs font-bold text-rose-400 uppercase tracking-widest mb-2 flex items-center justify-center gap-1.5";
+        statusText.innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-500"></span> 🔒 MIC ACCESS DENIED — ALLOW IN PERMISSIONS';
+        break;
+      case 'UNSUPPORTED':
+        statusText.className = "text-xs font-bold text-amber-300 uppercase tracking-widest mb-2 flex items-center justify-center gap-1.5";
+        statusText.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-400"></span> ⚠️ VOICE NOT SUPPORTED IN WEBVIEW — USE QUICK PROMPTS';
+        break;
+      case 'STOPPED':
+        statusText.className = "text-xs font-bold text-slate-300 uppercase tracking-widest mb-2 flex items-center justify-center gap-1.5";
+        statusText.innerHTML = '<span class="w-2 h-2 rounded-full bg-slate-400"></span> ⏹️ VOICE INPUT STOPPED';
+        break;
+      case 'ERROR':
+        statusText.className = "text-xs font-bold text-rose-400 uppercase tracking-widest mb-2 flex items-center justify-center gap-1.5";
+        statusText.innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-400"></span> ⚠️ VOICE RECOGNITION ERROR — TAP TO RETRY';
+        break;
+      default:
+        statusText.className = "text-xs font-bold text-blue-400 uppercase tracking-widest mb-2 flex items-center justify-center gap-1.5";
+        statusText.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400"></span> VOICE AI READY';
+    }
+  };
+  voiceManager.onStateChange(updateVoiceStatus);
 
   if (micBtn) {
     micBtn.addEventListener('click', async () => {
       const startOrStop = async () => {
         if (voiceManager.state === 'LISTENING') {
           voiceManager.stopSession();
-          if (statusText) statusText.textContent = i18n.t('processing', 'Voice AI Processing...');
         } else {
-          voiceManager.onStateChange((state) => {
-            if (statusText) {
-              const stateKey = state.toLowerCase();
-              statusText.textContent = i18n.t(stateKey, `Voice AI State: ${state}`);
-            }
-          });
           await voiceManager.startSession();
         }
       };
@@ -195,55 +228,94 @@ export function bindVoiceAssistantEvents(container) {
     });
   }
 
-  // Simulate speaking alternative phrases
-  const samples = [
-    {
-      text: "There is mud sliding down the western embankment and blocking the pathway.",
-      hazard: "Soil Movement",
-      indicator: "Slope Displacement",
-      confidence: "96%"
-    },
-    {
-      text: "Water is pooling heavily near the retaining wall with several small falling rocks.",
-      hazard: "Rockfall",
-      indicator: "Water Accumulation",
-      confidence: "91%"
-    },
-    {
-      text: "There is a large crack near the road and water is coming from the hill.",
-      hazard: "Ground Crack",
-      indicator: "Water Seepage",
-      confidence: "94%"
+  // Global helper for replaying chat voice messages
+  window._replaySafetyAudio = (text) => {
+    voiceManager.speakText(text, false);
+  };
+
+  // Global helper for appending voice-spoken turns into the UI chat history
+  window._addVoiceChatMessage = (userText, aiText) => {
+    if (transcriptEl) {
+      transcriptEl.textContent = `"${userText}"`;
     }
-  ];
+    if (chatHistory) {
+      const escapedAi = (aiText || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+      chatHistory.innerHTML += `
+        <div class="bg-blue-600/30 text-cyan-200 border border-blue-400/30 p-2 rounded-xl self-end max-w-[85%] font-medium text-right text-xs shadow">
+          <div class="flex items-center justify-end gap-1 text-[10px] text-cyan-400 mb-0.5 font-bold">
+            <span class="material-symbols-outlined text-[12px]">mic</span> You (Voice)
+          </div>
+          ${userText}
+        </div>
+        <div class="bg-cyan-950/70 border border-cyan-500/40 text-white p-2.5 rounded-xl self-start max-w-[95%] font-medium text-xs flex flex-col gap-1.5 shadow-md">
+          <div class="flex items-center gap-1 text-[10px] text-cyan-400 font-bold mb-0.5">
+            <span class="material-symbols-outlined text-[12px]">smart_toy</span> PRITHVI AI
+          </div>
+          <div>${(aiText || '').replace(/\n/g, '<br>')}</div>
+          <button onclick="window._replaySafetyAudio('${escapedAi}')" class="self-start flex items-center gap-1 text-[11px] font-bold text-cyan-300 hover:text-cyan-100 bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded-md transition-colors mt-1">
+            <span class="material-symbols-outlined text-[14px]">volume_up</span> Replay Voice
+          </button>
+        </div>
+      `;
+      chatHistory.scrollTop = chatHistory.scrollHeight;
+    }
+  };
+
+  // Multilingual safety advice database
+  const aiResponses = {
+    en: {
+      "Is my area safe?": "Your sector is currently marked HIGH RISK with an 82% probability due to heavy rainfall. Please avoid steep slope embankments.",
+      "What should I do during a landslide?": "1. Move to high ground immediately. 2. Avoid river valleys and low-lying roads. 3. Stay alert for rumbling sounds or crackling trees. 4. Trigger SOS to broadcast your location.",
+      "Where is the nearest shelter?": "Central Civic Shelter is 1.2 kilometers East. Capacity is available and medical personnel are on site.",
+      "How can I report a hazard?": "Tap the Report tab at the bottom, upload a photo, add details, and submit with live GPS coordinates."
+    },
+    hi: {
+      "Is my area safe?": "आपके क्षेत्र में भारी वर्षा के कारण भूस्खलन का जोखिम 82% है। कृपया ढलानों और घाटी वाले मार्गों से दूर रहें।",
+      "What should I do during a landslide?": "1. तुरंत किसी ऊंचे और पक्के स्थान पर जाएं। 2. ढलानों और नदी घाटियों से दूर रहें। 3. गड़गड़ाहट की आवाज पर सतर्क रहें। 4. आपातकालीन सहायता के लिए एसओएस भेजें।",
+      "Where is the nearest shelter?": "निकटतम सुरक्षित राहत आश्रय लगभग 1.2 किलोमीटर पूर्व में स्थित है, जहां चिकित्सा कर्मी उपलब्ध हैं।",
+      "How can I report a hazard?": "नीचे दिए गए 'रिपोर्ट' विकल्प पर जाएं, फोटो अपलोड करें और लाइव जीपीएस के साथ रिपोर्ट दर्ज करें।"
+    },
+    mr: {
+      "Is my area safe?": "आपल्या भागात अतिवृष्टीमुळे दरड कोसळण्याचा धोका 82% आहे. कृपया डोंगराळ उतारांपासून दूर राहा.",
+      "What should I do during a landslide?": "1. त्वरित उंच आणि सुरक्षित ठिकाणी जा. 2. नद्या आणि सखल रस्ते टाळा. 3. दरड कोसळण्याच्या आवाजावर लक्ष ठेवा. 4. तातडीच्या मदतीसाठी एसओएस पाठवा.",
+      "Where is the nearest shelter?": "जवळचे सुरक्षित निवारक केंद्र 1.2 किलोमीटर अंतरावर पूर्वेकडे आहे.",
+      "How can I report a hazard?": "खालील 'रिपोर्ट' बटनावर क्लिक करा, फोटो जोडा आणि थेट जीपीएस लोकेशनसह तक्रार नोंदवा."
+    }
+  };
 
   // AI Chatbot preset queries
   const chatHistory = container.querySelector('#ai-chat-history');
-  const aiResponses = {
-    "Is my area safe?": "Your sector is currently marked HIGH RISK (82% probability) due to 145mm/24hr heavy rainfall. Please avoid steep slope embankments.",
-    "What should I do during a landslide?": "1. Move to high ground immediately.\n2. Avoid river valleys and low-lying roads.\n3. Stay alert for rumbling or crackling trees.\n4. Trigger SOS to broadcast location.",
-    "Where is the nearest shelter?": "Central Civic Shelter is 1.2 km East. Capacity is available and medical personnel are on site.",
-    "How can I report a hazard?": "Tap the 'Report' tab at the bottom, take or upload a photo, add details, and submit with live GPS coordinates."
-  };
 
   container.querySelectorAll('[data-ai-query]').forEach(btn => {
     btn.addEventListener('click', () => {
       const query = btn.getAttribute('data-ai-query');
-      const response = aiResponses[query] || "I am analyzing real-time GIS and weather telemetry for your sector.";
+      const lang = i18n.activeLang || 'en';
+      const langMap = aiResponses[lang] || aiResponses.en;
+      const response = langMap[query] || aiResponses.en[query] || "I am analyzing real-time GIS and weather telemetry for your sector.";
+
+      if (transcriptEl) {
+        transcriptEl.textContent = `"${query}"`;
+      }
+
+      const escapedResp = response.replace(/'/g, "\\'").replace(/"/g, '&quot;');
 
       if (chatHistory) {
         chatHistory.innerHTML += `
-          <div class="bg-slate-800 text-cyan-300 p-2 rounded-xl self-end max-w-[85%] font-medium text-right">
+          <div class="bg-slate-800 text-cyan-300 p-2 rounded-xl self-end max-w-[85%] font-medium text-right text-xs">
             ${query}
           </div>
-          <div class="bg-cyan-950/60 border border-cyan-500/30 text-white p-2.5 rounded-xl self-start max-w-[90%] font-medium">
-            ${response.replace(/\n/g, '<br>')}
+          <div class="bg-cyan-950/70 border border-cyan-500/40 text-white p-2.5 rounded-xl self-start max-w-[95%] font-medium text-xs flex flex-col gap-1.5 shadow-md">
+            <div>${response.replace(/\n/g, '<br>')}</div>
+            <button onclick="window._replaySafetyAudio('${escapedResp}')" class="self-start flex items-center gap-1 text-[11px] font-bold text-cyan-300 hover:text-cyan-100 bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded-md transition-colors mt-1">
+              <span class="material-symbols-outlined text-[14px]">volume_up</span> Replay Voice
+            </button>
           </div>
         `;
         chatHistory.scrollTop = chatHistory.scrollHeight;
       }
 
-      voiceManager.speakText(response);
+      // Speak directly through the native speech engine
+      voiceManager.speakText(response, false);
     });
   });
 

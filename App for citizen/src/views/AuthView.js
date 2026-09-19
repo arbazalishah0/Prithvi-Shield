@@ -1,12 +1,19 @@
 import { store } from '../store.js';
+import { isSupabaseConfigured } from '../services/supabaseClient.js';
 
-let authMode = 'login'; // 'login' | 'signup' | 'forgot'
+// Fix #18: authMode moved from module variable into store.state
+// A stale module-level variable caused authMode to persist incorrectly across re-renders
+if (!store.state.authMode) {
+  store.state.authMode = 'login'; // 'login' | 'signup' | 'forgot'
+}
 
 export function renderAuthView() {
-  const { currentUser } = store.state;
+  const { currentUser, authMode } = store.state;
 
   return `
     <div class="flex-1 flex flex-col bg-slate-950 text-white min-h-screen items-center justify-center p-5 antialiased overflow-y-auto">
+      <!-- Fix #17: Inline error/success banner — no more browser alert() -->
+      <div id="auth-message-area" class="hidden fixed top-4 left-4 right-4 z-50 text-sm font-semibold px-4 py-3 rounded-2xl border shadow-2xl"></div>
       <main class="w-full max-w-md bg-slate-900 p-7 rounded-3xl shadow-2xl border border-slate-800 flex flex-col gap-5 my-auto text-center">
 
         <!-- Official Prithvi Shield Logo & Header Branding -->
@@ -26,14 +33,14 @@ export function renderAuthView() {
           </div>
         </div>
 
-        ${authMode === 'login' ? `
+        ${store.state.authMode === 'login' ? `
           <!-- LOGIN FORM -->
           <form id="login-form" class="flex flex-col gap-3.5 text-left">
             <div class="flex flex-col gap-1">
               <label class="text-xs font-bold text-slate-300">Email Address</label>
               <div class="relative">
                 <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">mail</span>
-                <input id="login-email" type="email" class="w-full pl-9 pr-3 py-3 bg-slate-800 border border-slate-700 rounded-2xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 placeholder:text-slate-500" placeholder="citizen@prithvishield.gov.in" value="${currentUser.email || 'rahul.sharma@gmail.com'}" required />
+                <input id="login-email" type="email" class="w-full pl-9 pr-3 py-3 bg-slate-800 border border-slate-700 rounded-2xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 placeholder:text-slate-500" placeholder="citizen@prithvishield.gov.in" value="${currentUser.email || ''}" />
               </div>
             </div>
 
@@ -44,7 +51,7 @@ export function renderAuthView() {
               </div>
               <div class="relative">
                 <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">lock</span>
-                <input id="login-password" type="password" class="w-full pl-9 pr-3 py-3 bg-slate-800 border border-slate-700 rounded-2xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 placeholder:text-slate-500" placeholder="••••••••" required />
+                <input id="login-password" type="password" class="w-full pl-9 pr-3 py-3 bg-slate-800 border border-slate-700 rounded-2xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 placeholder:text-slate-500" placeholder="•••••••• (min 6 chars)" />
               </div>
             </div>
 
@@ -62,7 +69,7 @@ export function renderAuthView() {
           </div>
 
           <!-- Google Login -->
-          <button id="auth-google-login-btn" type="button" class="w-full py-3.5 px-4 bg-slate-800 hover:bg-slate-700/80 text-white font-bold text-sm rounded-2xl border border-slate-700 transition-all flex items-center justify-center gap-3 shadow-md active:scale-98">
+          <button id="auth-google-login-btn" type="button" class="w-full py-3.5 px-4 bg-slate-800 hover:bg-slate-700/80 text-white font-bold text-sm rounded-2xl border border-slate-700 transition-all flex items-center justify-center gap-3 shadow-md active:scale-98 ${!isSupabaseConfigured ? 'opacity-60' : ''}" title="${!isSupabaseConfigured ? 'Configure Supabase credentials to enable Google login' : ''}">
             <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>
               <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"></path>
@@ -76,7 +83,7 @@ export function renderAuthView() {
             Don't have an account?
             <button type="button" id="switch-to-signup-btn" class="font-bold text-cyan-400 hover:underline">Sign Up</button>
           </p>
-        ` : authMode === 'signup' ? `
+        ` : store.state.authMode === 'signup' ? `
           <!-- SIGN UP FORM -->
           <form id="signup-form" class="flex flex-col gap-3 text-left">
             <div class="flex flex-col gap-1">
@@ -118,7 +125,7 @@ export function renderAuthView() {
             Already have an account?
             <button type="button" id="switch-to-login-btn" class="font-bold text-cyan-400 hover:underline">Log In</button>
           </p>
-        ` : `
+        ` : store.state.authMode === 'forgot' ? `
           <!-- FORGOT PASSWORD FORM -->
           <form id="forgot-form" class="flex flex-col gap-3.5 text-left">
             <div class="flex flex-col gap-1">
@@ -126,15 +133,16 @@ export function renderAuthView() {
               <input id="forgot-email" type="email" class="w-full px-3.5 py-3 bg-slate-800 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 placeholder:text-slate-500" placeholder="citizen@prithvishield.gov.in" required />
             </div>
 
-            <button type="submit" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 via-cyan-600 to-blue-600 hover:from-blue-500 text-white font-extrabold text-sm shadow-xl transition-all">
-              SEND RESET LINK
+            <button type="submit" id="forgot-submit-btn" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 via-cyan-600 to-blue-600 hover:from-blue-500 text-white font-extrabold text-sm shadow-xl transition-all flex items-center justify-center gap-2">
+              <span>SEND RESET LINK</span>
+              <span class="material-symbols-outlined text-[18px]">send</span>
             </button>
           </form>
 
           <p class="text-xs text-slate-400 mt-2">
             <button type="button" id="switch-to-login-btn" class="font-bold text-cyan-400 hover:underline">Back to Log In</button>
           </p>
-        `}
+        ` : ``}
 
         <!-- Official Compliance Footer -->
         <footer class="border-t border-slate-800 pt-3 flex items-center justify-center gap-2 text-slate-400 text-[11px]">
@@ -158,27 +166,31 @@ export function bindAuthEvents(container) {
 
   if (switchSignup) {
     switchSignup.addEventListener('click', () => {
-      authMode = 'signup';
+      store.state.authMode = 'signup';
       store.notify();
     });
   }
 
   if (switchLogin) {
     switchLogin.addEventListener('click', () => {
-      authMode = 'login';
+      store.state.authMode = 'login';
       store.notify();
     });
   }
 
   if (switchForgot) {
     switchForgot.addEventListener('click', () => {
-      authMode = 'forgot';
+      store.state.authMode = 'forgot';
       store.notify();
     });
   }
 
   if (googleBtn) {
     googleBtn.addEventListener('click', () => {
+      if (!isSupabaseConfigured) {
+        showInlineMessage(container, 'Google login needs Supabase configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env');
+        return;
+      }
       store.loginWithGoogle();
     });
   }
@@ -186,41 +198,83 @@ export function bindAuthEvents(container) {
   if (loginForm) {
     loginForm.addEventListener('submit', (e) => {
       e.preventDefault();
-      const email = container.querySelector('#login-email')?.value;
-      const pass = container.querySelector('#login-password')?.value;
-      store.loginWithEmail(email || 'rahul.sharma@gmail.com', pass);
+      const email = container.querySelector('#login-email')?.value?.trim() || '';
+      const pass  = container.querySelector('#login-password')?.value || '';
+      // Fix #1: store.loginWithEmail now validates and returns {success, error}
+      const result = store.loginWithEmail(email, pass);
+      if (result && !result.success) {
+        showInlineMessage(container, result.error);
+      }
     });
   }
 
   if (signupForm) {
     signupForm.addEventListener('submit', (e) => {
       e.preventDefault();
-      const fn = container.querySelector('#signup-fullname')?.value;
-      const em = container.querySelector('#signup-email')?.value;
-      const ph = container.querySelector('#signup-phone')?.value;
-      const pass = container.querySelector('#signup-password')?.value;
-      const confirmPass = container.querySelector('#signup-confirm-password')?.value;
+      const fn          = container.querySelector('#signup-fullname')?.value?.trim() || '';
+      const em          = container.querySelector('#signup-email')?.value?.trim() || '';
+      const ph          = container.querySelector('#signup-phone')?.value?.trim() || '';
+      const pass        = container.querySelector('#signup-password')?.value || '';
+      const confirmPass = container.querySelector('#signup-confirm-password')?.value || '';
 
       if (pass !== confirmPass) {
-        alert('Passwords do not match. Please re-enter.');
+        showInlineMessage(container, 'Passwords do not match. Please re-enter.');
         return;
       }
-
       if (ph && !/^[6-9]\d{9}$/.test(ph)) {
-        alert('Please enter a valid 10-digit Indian mobile number after +91.');
+        showInlineMessage(container, 'Please enter a valid 10-digit Indian mobile number after +91.');
         return;
       }
-
-      store.registerCitizen(fn, em, `+91 ${ph}`, pass);
+      const result = store.registerCitizen(fn, em, `+91 ${ph}`, pass);
+      if (result && !result.success) {
+        showInlineMessage(container, result.error);
+      }
     });
   }
 
   if (forgotForm) {
-    forgotForm.addEventListener('submit', (e) => {
+    forgotForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      alert('Password reset link sent to your registered email address!');
-      authMode = 'login';
-      store.notify();
+      const email = container.querySelector('#forgot-email')?.value?.trim() || '';
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!email || !emailRegex.test(email)) {
+        showInlineMessage(container, 'Please enter a valid email address.');
+        return;
+      }
+      const submitBtn = container.querySelector('#forgot-submit-btn');
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Sending...'; }
+
+      // Fix #17: real Supabase password reset instead of fake alert()
+      if (isSupabaseConfigured) {
+        try {
+          const { supabase } = await import('../services/supabaseClient.js');
+          if (!supabase) throw new Error('Supabase unavailable');
+          const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${window.location.origin}/?reset=true`
+          });
+          if (error) throw error;
+          showInlineMessage(container, `✓ Reset link sent to ${email}. Check your inbox.`, false);
+        } catch (err) {
+          showInlineMessage(container, `Could not send reset: ${err.message}`);
+        }
+      } else {
+        showInlineMessage(container, '⚠️ Password reset requires Supabase. Configure credentials in .env');
+      }
+
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'SEND RESET LINK'; }
+      setTimeout(() => { store.state.authMode = 'login'; store.notify(); }, 3000);
     });
   }
+}
+
+/** Show inline error/success message — replaces browser alert() */
+function showInlineMessage(container, msg, isError = true) {
+  const area = container.querySelector('#auth-message-area');
+  if (!area) return;
+  area.textContent = msg;
+  area.className = isError
+    ? 'fixed top-4 left-4 right-4 z-50 text-sm font-semibold px-4 py-3 rounded-2xl border shadow-2xl bg-red-950/90 border-red-500/60 text-red-200'
+    : 'fixed top-4 left-4 right-4 z-50 text-sm font-semibold px-4 py-3 rounded-2xl border shadow-2xl bg-emerald-950/90 border-emerald-500/60 text-emerald-200';
+  area.classList.remove('hidden');
+  setTimeout(() => area.classList.add('hidden'), 5000);
 }

@@ -1,4 +1,5 @@
 import { store } from '../store.js';
+import { requireApiBaseUrl } from '../services/apiConfig.js';
 
 export function renderSOSView() {
   const { sosState, currentLocation, familyMembers, currentUser } = store.state;
@@ -72,7 +73,11 @@ export function renderSOSView() {
               <span class="material-symbols-outlined text-cyan-300 text-[20px]" style="font-variation-settings: 'FILL' 1;">my_location</span>
               <span class="text-xs font-bold uppercase tracking-wider text-cyan-200">Live GPS Coordinates</span>
             </div>
-            <span class="text-xs font-bold text-right font-mono text-cyan-100">${(currentLocation.lat || 30.3165).toFixed(4)}° N, ${(currentLocation.lng || 78.0322).toFixed(4)}° E (±${currentLocation.accuracy || 10}m)</span>
+            <!-- Fix #4: never show hardcoded fallback coords to rescue teams -->
+            ${currentLocation.lat && currentLocation.lng
+              ? `<span class="text-xs font-bold text-right font-mono text-cyan-100">${currentLocation.lat.toFixed(4)}° N, ${currentLocation.lng.toFixed(4)}° E (±${currentLocation.accuracy || 10}m)</span>`
+              : `<span class="text-xs font-bold text-right font-mono text-amber-300 animate-pulse">⚠ GPS ACQUIRING... SOS will transmit once locked</span>`
+            }
           </div>
 
           ${sosState.googleMapsUrl ? `
@@ -154,7 +159,7 @@ export function bindSOSEvents(container) {
       store.notify();
       if (store.state.sosState.eventId) {
         try {
-          await fetch(`http://127.0.0.1:8000/api/emergency/sos/${store.state.sosState.eventId}/status`, {
+          await fetch(`${requireApiBaseUrl()}/api/emergency/sos/${store.state.sosState.eventId}/status`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -175,7 +180,7 @@ export function bindSOSEvents(container) {
       store.notify();
       if (store.state.sosState.eventId) {
         try {
-          await fetch(`http://127.0.0.1:8000/api/emergency/sos/${store.state.sosState.eventId}/status`, {
+          await fetch(`${requireApiBaseUrl()}/api/emergency/sos/${store.state.sosState.eventId}/status`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -212,4 +217,3 @@ export function bindSOSEvents(container) {
     });
   }
 }
-

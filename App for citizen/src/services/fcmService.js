@@ -4,14 +4,16 @@
  */
 
 import { store } from '../store.js';
+import { requireApiBaseUrl } from './apiConfig.js';
 
-const BACKEND_API_BASE = 'http://127.0.0.1:8000';
+const getBackendApiBase = () => requireApiBaseUrl();
 
 class FCMService {
   constructor() {
     this.deviceToken = null;
     this.pollInterval = null;
     this.lastProcessedAlertId = null;
+    this._initialized = false; // Fix #8: tracked so main.js can re-init on login
   }
 
   /**
@@ -38,7 +40,7 @@ class FCMService {
         preferred_language: language
       };
 
-      const res = await fetch(`${BACKEND_API_BASE}/api/device/register`, {
+      const res = await fetch(`${getBackendApiBase()}/api/device/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -53,26 +55,69 @@ class FCMService {
 
     // Start background alert polling for real-time live push simulation
     this.startLiveAlertPolling(userId);
+    this._initialized = true;
   }
 
   /**
-   * Polls backend for live emergency broadcasts targeted for this citizen
+   * Sets up event-driven alert synchronization:
+   * 1. Immediate sync on login / launch
+   * 2. Sync on app resume from background (visibilitychange)
+   * 3. Sync on network reconnection (online)
+   * 4. Low-frequency safety heartbeat (every 5 mins) to prevent battery drain
    */
   startLiveAlertPolling(userId) {
-    if (this.pollInterval) clearInterval(this.pollInterval);
-    
-    // Initial fetch
+    this.stopPolling();
+
+    // 1. Initial sync
     this.syncAlerts(userId);
 
-    // Periodic check every 8 seconds
+    // 2. Sync when citizen returns to app / unlocks screen
+    this._visibilityHandler = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        console.debug('[FCM Service] App resumed — checking missed emergency alerts');
+        this.syncAlerts(userId);
+      }
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', this._visibilityHandler);
+    }
+
+    // 3. Sync immediately when cellular / Wi-Fi network reconnects
+    this._onlineHandler = () => {
+      console.debug('[FCM Service] Network online — syncing emergency alerts');
+      this.syncAlerts(userId);
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', this._onlineHandler);
+    }
+
+    // 4. Low-frequency background heartbeat (5 minutes = 300,000ms, not 15s)
     this.pollInterval = setInterval(() => {
       this.syncAlerts(userId);
-    }, 8000);
+    }, 300000);
+  }
+
+  /** Clean up event listeners and intervals to prevent battery drain & memory leaks */
+  stopPolling() {
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval);
+      this.pollInterval = null;
+    }
+    if (typeof document !== 'undefined' && this._visibilityHandler) {
+      document.removeEventListener('visibilitychange', this._visibilityHandler);
+      this._visibilityHandler = null;
+    }
+    if (typeof window !== 'undefined' && this._onlineHandler) {
+      window.removeEventListener('online', this._onlineHandler);
+      this._onlineHandler = null;
+    }
+    this._initialized = false;
+    console.info('[FCM Service] Alert polling stopped.');
   }
 
   async syncAlerts(userId) {
     try {
-      const res = await fetch(`${BACKEND_API_BASE}/api/alerts/citizen/${userId}`);
+      const res = await fetch(`${getBackendApiBase()}/api/alerts/citizen/${userId}`);
       if (res.ok) {
         const data = await res.json();
         const alerts = data.alerts || [];
@@ -145,7 +190,7 @@ class FCMService {
 
   async markAsRead(alertId, userId) {
     try {
-      await fetch(`${BACKEND_API_BASE}/api/alerts/mark-read`, {
+      await fetch(`${getBackendApiBase()}/api/alerts/mark-read`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ alert_id: alertId, user_id: userId })
